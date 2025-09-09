@@ -1,0 +1,34 @@
+# Alternative Backend Dockerfile for Node.js application
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Build if needed (for TypeScript projects)
+RUN npm run build || true
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app .
+
+USER nodejs
+
+EXPOSE 8080
+
+CMD ["npm", "start"]
