@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Database
+  database:
+    image: mysql:8.0
+    container_name: dasibom-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dasibom
+      MYSQL_USER: dasibom_user
+      MYSQL_PASSWORD: dasibom_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dasibom-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_NAME=dasibom
+      - DB_USERNAME=dasibom_user
+      - DB_PASSWORD=dasibom_password
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+    volumes:
+      - ./backend/logs:/app/logs
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dasibom-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Redis (for caching/session management)
+  redis:
+    image: redis:7-alpine
+    container_name: dasibom-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+networks:
+  dasibom-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

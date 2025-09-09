@@ -1,0 +1,47 @@
+services:
+  # Database
+  database:
+    image: mysql:8.0
+    container_name: dasibom-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dasibom
+      MYSQL_USER: dasibom_user
+      MYSQL_PASSWORD: dasibom_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Redis (for caching/session management)
+  redis:
+    image: redis:7-alpine
+    container_name: dasibom-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  # Adminer (Database management tool)
+  adminer:
+    image: adminer:latest
+    container_name: dasibom-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+networks:
+  dasibom-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

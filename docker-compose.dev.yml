@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Development Database
+  database:
+    image: mysql:8.0
+    container_name: dasibom-db-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: devpassword
+      MYSQL_DATABASE: dasibom_dev
+      MYSQL_USER: dev_user
+      MYSQL_PASSWORD: dev_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - dasibom-dev-network
+
+  # Backend Development (with volume mounting for hot reload)
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: dasibom-backend-dev
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_NAME=dasibom_dev
+      - DB_USERNAME=dev_user
+      - DB_PASSWORD=dev_password
+    ports:
+      - "8081:8080"
+      - "5005:5005"  # Debug port
+    volumes:
+      - ./backend:/app
+      - /app/build  # Exclude build directory
+    depends_on:
+      - database
+    networks:
+      - dasibom-dev-network
+
+  # Frontend Development (with volume mounting for hot reload)
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: dasibom-frontend-dev
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8081
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Exclude node_modules
+    depends_on:
+      - backend-dev
+    networks:
+      - dasibom-dev-network
+
+networks:
+  dasibom-dev-network:
+    driver: bridge
+
+volumes:
+  mysql_dev_data:
