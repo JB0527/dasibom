@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import ModalBase from './ModalBase';
 
 interface MissingPerson {
@@ -29,8 +29,6 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
   person, 
   onReport 
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   console.log('PersonInfoModal 렌더링:', { isOpen, person });
 
   if (!person) {
@@ -93,35 +91,25 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
           </div>
         </div>
 
-        {/* 확장 가능한 추가 정보 */}
-        {isExpanded && (
-          <div className="space-y-2 pt-4 border-t">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">키</span>
-              <span>{person.height}cm</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">몸무게</span>
-              <span>{person.weight}kg</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">체격</span>
-              <span>{person.build}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">얼굴형</span>
-              <span>{person.faceShape}</span>
-            </div>
+        {/* 추가 정보 (항상 표시) */}
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-500">키</span>
+            <span>{person.height}cm</span>
           </div>
-        )}
-
-        {/* 확장/축소 버튼 */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full py-2 text-blue-500 text-sm font-medium"
-        >
-          {isExpanded ? '간단히 보기' : '상세 정보 보기'}
-        </button>
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-500">몸무게</span>
+            <span>{person.weight}kg</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-500">체격</span>
+            <span>{person.build}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-500">얼굴형</span>
+            <span>{person.faceShape}</span>
+          </div>
+        </div>
 
         {/* 신고 버튼 */}
         <button
