@@ -1,20 +1,7 @@
 import React from 'react';
 import ModalBase from './ModalBase';
-
-interface MissingPerson {
-  id: string;
-  name: string;
-  age: number;
-  nationality: string;
-  height: number;
-  weight: number;
-  build: string;
-  faceShape: string;
-  lastSeenDate: string;
-  lastSeenLocation: string;
-  imageUrl?: string;
-  elapsedTime: string;
-}
+import type { MissingPerson } from '../../types/missingPerson';
+import { calculateElapsedTime } from '../../utils/timeUtils';
 
 interface PersonInfoModalProps {
   isOpen: boolean;
@@ -46,15 +33,15 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
         {/* 경과 시간 */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">실종 후 경과시간</span>
-          <span className="text-red-500 font-semibold">{person.elapsedTime}</span>
+          <span className="text-red-500 font-semibold">{calculateElapsedTime(person.lastSeenDate).formatted}</span>
         </div>
 
         {/* 기본 정보 */}
         <div className="flex gap-4">
           <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0">
-            {person.imageUrl ? (
+            {person.photo ? (
               <img 
-                src={person.imageUrl} 
+                src={person.photo} 
                 alt={person.name}
                 className="w-full h-full object-cover rounded-lg"
               />

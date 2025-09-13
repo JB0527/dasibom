@@ -1,110 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { Map, MapMarker } from 'react-kakao-maps-sdk';
+import React, { useEffect } from 'react';
+import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk';
 import PersonInfoModal from '../Modal/PersonInfoModal';
-
-// 임시 데이터 (나중에 API에서 가져올 예정)
-const mockMissingPersons = [
-  {
-    id: '1',
-    name: '왕성민',
-    age: 26,
-    nationality: '내국인',
-    height: 170,
-    weight: 60,
-    build: '보통 이상',
-    faceShape: '갸름한형',
-    lastSeenDate: '2025년 08월30일',
-    lastSeenLocation: '서울 중구 을지로 281',
-    elapsedTime: '00:23',
-    coordinates: { lat: 37.5665, lng: 126.9780 }
-  }
-];
+import MissingPersonMarker from './MissingPersonMarker';
+import UserLocationMarker from './UserLocationMarker';
+import { useKakaoMap } from '../../hooks/useKakaoMap';
+import { useMarkerInteraction } from '../../hooks/useMarkerInteraction';
+import { useUserLocation } from '../../hooks/useUserLocation';
+import { mockMissingPersons } from '../../data/mockMissingPersons';
 
 const MapContainer: React.FC = () => {
-  const [selectedPerson, setSelectedPerson] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isKakaoLoaded, setIsKakaoLoaded] = useState(false);
+  // 커스텀 훅 사용
+  const { isKakaoLoaded, mapInstance, setMapInstance } = useKakaoMap();
+  const {
+    selectedPerson,
+    isModalOpen,
+    selectedMarkerId,
+    handleMarkerClick,
+    handleCloseModal,
+    handleReport
+  } = useMarkerInteraction(mapInstance, mockMissingPersons);
+  
+  // 사용자 위치 훅
+  const { userLocation, isLoading: isLocationLoading, error: locationError, requestLocation } = useUserLocation();
 
-  // 카카오맵 동적 로드 (새로운 방식)
+  // 사용자 위치가 변경되면 지도 중심을 이동
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_KAKAO_MAP_KEY;
-    
-    // 이미 로드되어 있다면 즉시 설정
-    if (window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
-      console.log('카카오맵 이미 로드됨');
-      setIsKakaoLoaded(true);
-      return;
+    if (userLocation && mapInstance) {
+      const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+      mapInstance.setCenter(moveLatLon);
+      mapInstance.setLevel(3); // 적절한 줌 레벨로 설정
     }
+  }, [userLocation, mapInstance]);
 
-    // 중복 로드 방지
-    if (document.querySelector(`script[src*="dapi.kakao.com"]`)) {
-      console.log('카카오맵 스크립트 이미 존재');
-      // 기존 스크립트가 있다면 kakao.maps.load() 사용
-      if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
-        window.kakao.maps.load(() => {
-          console.log('기존 카카오맵 로드 완료');
-          setIsKakaoLoaded(true);
-        });
-      } else {
-        setIsKakaoLoaded(true);
-      }
-      return;
-    }
-
-    console.log('카카오맵 스크립트 로드 시작');
-    
-    // 카카오맵 스크립트 동적 로드 (공식 문서 방식: autoload=false 사용)
-    const script = document.createElement('script');
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
-    script.async = true;
-    
-    script.onload = () => {
-      console.log('카카오맵 스크립트 로드 완료');
-      // 공식 문서에 따른 올바른 방법: kakao.maps.load() 사용
-      if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
-        window.kakao.maps.load(() => {
-          console.log('카카오맵 로드 완료');
-          setIsKakaoLoaded(true);
-        });
-      } else {
-        console.error('kakao.maps.load 함수를 찾을 수 없음');
-        setIsKakaoLoaded(true);
-      }
-    };
-    
-    script.onerror = () => {
-      console.error('카카오맵 스크립트 로드 실패');
-      setIsKakaoLoaded(true); // 실패해도 지도 표시
-    };
-    
-    document.head.appendChild(script);
-    
-    return () => {
-      // 컴포넌트 언마운트 시 스크립트 정리
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
-
-  const handleMarkerClick = (person: any) => {
-    console.log('마커 클릭됨:', person);
-    setSelectedPerson(person);
-    setIsModalOpen(true);
-    console.log('모달 상태:', isModalOpen);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedPerson(null);
-  };
-
-  const handleReport = () => {
-    // 신고 페이지로 이동
-    console.log('신고하기 클릭:', selectedPerson);
-    // router.push(`/report/${selectedPerson.id}`);
-  };
-
+  // 로딩 상태
   if (!isKakaoLoaded) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
@@ -124,23 +52,70 @@ const MapContainer: React.FC = () => {
         center={{ lat: 37.5665, lng: 126.9780 }} // 서울 중심
         style={{ width: '100%', height: '100%' }}
         level={3}
+        onCreate={setMapInstance}
       >
-        {/* 실종자 마커들 */}
+        {/* 사용자 현재 위치 마커 */}
+        {userLocation && (
+          <CustomOverlayMap
+            position={{ lat: userLocation.lat, lng: userLocation.lng }}
+            yAnchor={0.5}
+            xAnchor={0.5}
+          >
+            <UserLocationMarker
+              lat={userLocation.lat}
+              lng={userLocation.lng}
+              accuracy={userLocation.accuracy}
+            />
+          </CustomOverlayMap>
+        )}
+
+        {/* 실종자 커스텀 마커들 */}
         {mockMissingPersons.map((person) => (
-          <MapMarker
+          <CustomOverlayMap
             key={person.id}
             position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
-            onClick={() => handleMarkerClick(person)}
-            image={{
-              src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
-              size: { width: 24, height: 35 },
-              options: {
-                offset: { x: 12, y: 35 }
-              }
-            }}
-          />
+            yAnchor={1}
+            xAnchor={0.5}
+          >
+            <MissingPersonMarker
+              person={person}
+              onClick={() => handleMarkerClick(person)}
+              isSelected={selectedMarkerId === person.id}
+            />
+          </CustomOverlayMap>
         ))}
       </Map>
+
+      {/* 위치 관련 UI 컨트롤 */}
+      <div className="absolute top-4 right-4 z-10 space-y-2">
+        {/* 위치 버튼 */}
+        <button
+          onClick={requestLocation}
+          disabled={isLocationLoading}
+          className="bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-colors"
+          title="내 위치로 이동"
+        >
+          {isLocationLoading ? (
+            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
+
+        {/* 위치 에러 메시지 */}
+        {locationError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-lg text-sm max-w-xs">
+            <div className="flex items-center">
+              <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{locationError}</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 실종자 정보 모달 */}
       <PersonInfoModal

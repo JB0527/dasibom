@@ -132,6 +132,12 @@ const ModalBase: React.FC<ModalBaseProps> = ({ isOpen, onClose, children, title 
 
       {/* Mobile Draggable Bottom Sheet */}
       <div className="md:hidden fixed inset-0 z-50">
+        {/* Mobile Backdrop */}
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
+          onClick={onClose}
+        />
+        
         <div 
           ref={modalRef}
           className="fixed left-0 right-0 bg-white rounded-t-lg shadow-xl overflow-hidden transition-all duration-200 ease-out"
@@ -140,6 +146,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({ isOpen, onClose, children, title 
             bottom: 0,
             transform: isDragging ? 'none' : 'translateY(0)'
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Drag Handle */}
           <div 
