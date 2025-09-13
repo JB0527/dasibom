@@ -1,10 +1,23 @@
 import React from 'react';
 import MapContainer from '../../components/Map/MapContainer';
+import Sidebar from '../../components/Layout/Sidebar';
+import MobileHeader from '../../components/Layout/MobileHeader';
 
 const HomePage: React.FC = () => {
   return (
-    <div className="w-full h-screen">
-      <MapContainer />
+    <div className="w-full h-screen flex flex-col md:flex-row">
+      {/* 모바일 헤더 */}
+      <MobileHeader />
+      
+      {/* 데스크톱 사이드바 */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+      
+      {/* 지도 영역 */}
+      <div className="flex-1 relative">
+        <MapContainer />
+      </div>
     </div>
   );
 };
