@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 
 export const useKakaoMap = () => {
   const [isKakaoLoaded, setIsKakaoLoaded] = useState(false);
+  const [isClusterLoaded, setIsClusterLoaded] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
+
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_KAKAO_MAP_KEY;
@@ -11,6 +13,10 @@ export const useKakaoMap = () => {
     if (window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
       console.log('카카오맵 이미 로드됨');
       setIsKakaoLoaded(true);
+      // 클러스터링 라이브러리도 확인
+      if (window.kakao.maps.MarkerClusterer) {
+        setIsClusterLoaded(true);
+      }
       return;
     }
 
@@ -22,6 +28,10 @@ export const useKakaoMap = () => {
         window.kakao.maps.load(() => {
           console.log('기존 카카오맵 로드 완료');
           setIsKakaoLoaded(true);
+          // 클러스터링 라이브러리도 확인
+          if (window.kakao.maps.MarkerClusterer) {
+            setIsClusterLoaded(true);
+          }
         });
       } else {
         setIsKakaoLoaded(true);
@@ -31,9 +41,9 @@ export const useKakaoMap = () => {
 
     console.log('카카오맵 스크립트 로드 시작');
     
-    // 카카오맵 스크립트 동적 로드 (공식 문서 방식: autoload=false 사용)
+    // 카카오맵 스크립트 동적 로드 (클러스터링 라이브러리 포함)
     const script = document.createElement('script');
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&libraries=services,clusterer&autoload=false`;
     script.async = true;
     
     script.onload = () => {
@@ -43,6 +53,11 @@ export const useKakaoMap = () => {
         window.kakao.maps.load(() => {
           console.log('카카오맵 로드 완료');
           setIsKakaoLoaded(true);
+          // 클러스터링 라이브러리도 확인
+          if (window.kakao.maps.MarkerClusterer) {
+            console.log('클러스터링 라이브러리 로드 완료');
+            setIsClusterLoaded(true);
+          }
         });
       } else {
         console.error('kakao.maps.load 함수를 찾을 수 없음');
@@ -67,6 +82,7 @@ export const useKakaoMap = () => {
 
   return {
     isKakaoLoaded,
+    isClusterLoaded,
     mapInstance,
     setMapInstance
   };
