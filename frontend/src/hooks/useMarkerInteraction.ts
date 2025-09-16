@@ -66,18 +66,11 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
     setSelectedMarkerId(null);
   };
 
-  const handleReport = () => {
-    // 신고 페이지로 이동
-    console.log('신고하기 클릭:', selectedPerson);
-    // router.push(`/report/${selectedPerson?.id}`);
-  };
-
   return {
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
     handleMarkerClick,
-    handleCloseModal,
-    handleReport
+    handleCloseModal
   };
 };

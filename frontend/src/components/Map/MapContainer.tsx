@@ -19,8 +19,7 @@ const MapContainer: React.FC = () => {
     isModalOpen,
     selectedMarkerId,
     handleMarkerClick,
-    handleCloseModal,
-    handleReport
+    handleCloseModal
   } = useMarkerInteraction(mapInstance, mockMissingPersons);
   
   // 사용자 위치 훅
@@ -187,7 +186,6 @@ const MapContainer: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         person={selectedPerson}
-        onReport={handleReport}
       />
     </div>
   );

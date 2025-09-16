@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import ModalBase from './ModalBase';
 import type { MissingPerson } from '../../types/missingPerson';
 import { calculateElapsedTime } from '../../utils/timeUtils';
@@ -7,16 +8,21 @@ interface PersonInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   person: MissingPerson | null;
-  onReport: () => void;
 }
 
 const PersonInfoModal: React.FC<PersonInfoModalProps> = ({ 
   isOpen, 
   onClose, 
-  person, 
-  onReport 
+  person
 }) => {
+  const navigate = useNavigate();
   console.log('PersonInfoModal 렌더링:', { isOpen, person });
+
+  const handleReport = () => {
+    if (person) {
+      navigate(`/report/${person.id}`);
+    }
+  };
 
   if (!person) {
     console.log('person이 없어서 모달 렌더링 안함');
@@ -100,7 +106,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
 
         {/* 신고 버튼 */}
         <button
-          onClick={onReport}
+          onClick={handleReport}
           className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
         >
           신고하기
