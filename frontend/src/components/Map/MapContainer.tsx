@@ -57,7 +57,7 @@ const MapContainer: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full h-screen">
+    <div className="relative w-full h-full">
       {/* 카카오맵 */}
       <Map
         center={{ lat: 37.5665, lng: 126.9780 }} // 서울 중심
@@ -152,12 +152,12 @@ const MapContainer: React.FC = () => {
       )}
 
       {/* 위치 관련 UI 컨트롤 */}
-      <div className="absolute top-4 right-4 z-10 space-y-2">
+      <div className="absolute bottom-4 right-4 z-50 space-y-2">
         {/* 위치 버튼 */}
         <button
           onClick={requestLocation}
           disabled={isLocationLoading}
-          className="bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-colors"
+          className="bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 p-4 md:p-3 rounded-full shadow-lg border border-gray-200 transition-colors"
           title="내 위치로 이동"
         >
           {isLocationLoading ? (
