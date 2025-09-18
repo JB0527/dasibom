@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { calculateElapsedTime, getSelectedCircleSizeByAge } from '../../utils/timeUtils';
+import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
 import type { MissingPerson } from '../../types/missingPerson';
 
 interface MissingPersonMarkerProps {
@@ -24,29 +24,14 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
     return () => clearInterval(interval);
   }, [person.lastSeenDate]);
 
-  // 나이에 따른 원형 영역 크기 계산 (도보 예측 거리 기반) - 선택된 마커에서만 사용
-  const circleSize = isSelected 
-    ? getSelectedCircleSizeByAge(person.age)
-    : 0; // 선택되지 않은 마커는 크기 0
+  // 나이와 실종 경과 시간을 고려한 동적 도보 거리 계산
+  const dynamicWalkingDistance = getDynamicWalkingDistance(person.age, person.lastSeenDate);
 
   // 기본 프로필 이미지
   const defaultPhoto = 'https://via.placeholder.com/60x60/4F46E5/FFFFFF?text=' + person.name.charAt(0);
   
   return (
     <div className="relative" style={{ zIndex: isSelected ? 1000 : 100 }}>
-      {/* 검색 범위 원형 영역 (나이별 크기) - 선택된 마커에서만 표시 */}
-      {isSelected && (
-        <div 
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-blue-200/30 border-blue-400"
-          style={{
-            width: `${circleSize}px`,
-            height: `${circleSize}px`,
-            animation: 'pulse 2s infinite',
-            zIndex: 1
-          }}
-        />
-      )}
-      
       {/* 마커 컨테이너 - 최상위 우선순위 */}
       <div 
         className="relative cursor-pointer transform transition-all duration-200 hover:scale-110 hover:z-50"
