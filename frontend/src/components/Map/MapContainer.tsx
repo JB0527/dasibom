@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Map, CustomOverlayMap, MarkerClusterer } from 'react-kakao-maps-sdk';
+import { Map, CustomOverlayMap, MarkerClusterer, Circle } from 'react-kakao-maps-sdk';
 import PersonInfoModal from '../Modal/PersonInfoModal';
 import MissingPersonMarker from './MissingPersonMarker';
 import UserLocationMarker from './UserLocationMarker';
@@ -9,6 +9,7 @@ import { useUserLocation } from '../../hooks/useUserLocation';
 import { useZoomLevel } from '../../hooks/useZoomLevel';
 import { useClusterManager } from '../../hooks/useClusterManager';
 import { mockMissingPersons } from '../../data/mockMissingPersons';
+import { getDynamicWalkingDistance } from '../../utils/timeUtils';
 import { ZOOM_LEVELS, CLUSTER_STYLES } from '../../constants/mapConstants';
 
 const MapContainer: React.FC = () => {
@@ -18,6 +19,7 @@ const MapContainer: React.FC = () => {
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
+    selectedPersonElapsedTime,
     handleMarkerClick,
     handleCloseModal
   } = useMarkerInteraction(mapInstance, mockMissingPersons);
@@ -133,6 +135,20 @@ const MapContainer: React.FC = () => {
             </CustomOverlayMap>
           ))
         )}
+
+        {/* 선택된 실종자의 도보 범위 원 (실제 지리적 거리) */}
+        {selectedPerson && (
+          <Circle
+            center={{ lat: selectedPerson.coordinates.lat, lng: selectedPerson.coordinates.lng }}
+            radius={getDynamicWalkingDistance(selectedPerson.age, selectedPerson.lastSeenDate)}
+            strokeWeight={2}
+            strokeColor="#3b82f6"
+            strokeOpacity={0.8}
+            strokeStyle="solid"
+            fillColor="#3b82f6"
+            fillOpacity={0.1}
+          />
+        )}
       </Map>
 
 
@@ -186,6 +202,7 @@ const MapContainer: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         person={selectedPerson}
+        elapsedTime={selectedPersonElapsedTime}
       />
     </div>
   );
