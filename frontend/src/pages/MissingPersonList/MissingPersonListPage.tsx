@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMissingPerson } from '../../hooks/useMissingPerson';
 import { MissingPersonCard } from '../../components/MissingPerson/MissingPersonCard';
-import MobileHeader from '../../components/Layout/MobileHeader';
 import type { MissingPerson } from '../../types/missingPerson';
 
 const MissingPersonListPage: React.FC = () => {
@@ -33,25 +32,6 @@ const MissingPersonListPage: React.FC = () => {
     loadMissingPersons();
   }, [fetchMissingPersons]);
 
-  const handleBack = () => {
-    navigate('/');
-  };
-
-  const handleMenuClick = (menu: string) => {
-    switch (menu) {
-      case 'map':
-        navigate('/');
-        break;
-      case 'missing-list':
-        // 현재 페이지이므로 아무것도 하지 않음
-        break;
-      case 'report':
-        // 실종자 접수 페이지로 이동 (실제로는 특정 실종자 선택 후 이동)
-        break;
-      default:
-        break;
-    }
-  };
 
   // 필터링된 실종자 목록
   const filteredMissingPersons = missingPersons.filter(person => {
@@ -69,7 +49,7 @@ const MissingPersonListPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">실종자 목록을 불러오는 중...</p>
@@ -79,29 +59,7 @@ const MissingPersonListPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 모바일 헤더 */}
-      <MobileHeader onMenuClick={handleMenuClick} />
-      
-      {/* 데스크톱 헤더 */}
-      <div className="hidden md:block bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleBack}
-              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              돌아가기
-            </button>
-            <h1 className="text-xl font-semibold text-gray-900">실종자 목록</h1>
-            <div className="w-20"></div> {/* 균형을 위한 빈 공간 */}
-          </div>
-        </div>
-      </div>
-
+    <div className="h-full bg-gray-50 overflow-y-auto">
       {/* 메인 콘텐츠 */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* 필터 버튼 */}
@@ -155,7 +113,6 @@ const MissingPersonListPage: React.FC = () => {
             <MissingPersonCard
               key={person.id}
               person={person}
-              onReport={() => navigate(`/report/${person.id}`)}
             />
           ))}
         </div>

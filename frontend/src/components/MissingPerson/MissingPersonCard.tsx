@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
 import type { MissingPerson } from '../../types/missingPerson';
 
 interface MissingPersonCardProps {
   person: MissingPerson;
-  onReport: () => void;
 }
 
-const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person, onReport }) => {
+const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
+  const navigate = useNavigate();
   const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.lastSeenDate));
   const [walkingDistance, setWalkingDistance] = useState(
     getDynamicWalkingDistance(person.age, person.lastSeenDate)
@@ -120,7 +121,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person, onReport 
           {/* 하단 버튼 - 오른쪽 정렬 */}
           <div className="flex justify-end gap-2">
             <button
-              onClick={onReport}
+              onClick={() => navigate(`/report/${person.id}`)}
               className="bg-blue-500 text-white py-1.5 px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
             >
               신고하기
