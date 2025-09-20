@@ -16,6 +16,11 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
       isActive: activeMenu === 'map'
     },
     {
+      id: 'missing-list',
+      label: '실종자 목록',
+      isActive: activeMenu === 'missing-list'
+    },
+    {
       id: 'report',
       label: '실종자 접수 페이지',
       isActive: activeMenu === 'report'

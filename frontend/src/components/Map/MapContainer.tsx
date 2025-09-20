@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Map, CustomOverlayMap, MarkerClusterer } from 'react-kakao-maps-sdk';
+import { Map, CustomOverlayMap, MarkerClusterer, Circle } from 'react-kakao-maps-sdk';
 import PersonInfoModal from '../Modal/PersonInfoModal';
 import MissingPersonMarker from './MissingPersonMarker';
 import UserLocationMarker from './UserLocationMarker';
@@ -9,19 +9,33 @@ import { useUserLocation } from '../../hooks/useUserLocation';
 import { useZoomLevel } from '../../hooks/useZoomLevel';
 import { useClusterManager } from '../../hooks/useClusterManager';
 import { mockMissingPersons } from '../../data/mockMissingPersons';
+import { getDynamicWalkingDistance } from '../../utils/timeUtils';
 import { ZOOM_LEVELS, CLUSTER_STYLES } from '../../constants/mapConstants';
 
+// 24시간 이내 실종자만 필터링하는 함수
+const filterRecentMissingPersons = (persons: typeof mockMissingPersons) => {
+  const now = new Date();
+  return persons.filter(person => {
+    const missingDate = new Date(person.lastSeenDate);
+    const hoursElapsed = (now.getTime() - missingDate.getTime()) / (1000 * 60 * 60);
+    return hoursElapsed <= 24; // 24시간 이내만 표시
+  });
+};
+
 const MapContainer: React.FC = () => {
+  // 24시간 이내 실종자만 필터링
+  const recentMissingPersons = filterRecentMissingPersons(mockMissingPersons);
+  
   // 커스텀 훅 사용
   const { isKakaoLoaded, isClusterLoaded, mapInstance, setMapInstance } = useKakaoMap();
   const {
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
+    selectedPersonElapsedTime,
     handleMarkerClick,
-    handleCloseModal,
-    handleReport
-  } = useMarkerInteraction(mapInstance, mockMissingPersons);
+    handleCloseModal
+  } = useMarkerInteraction(mapInstance, recentMissingPersons);
   
   // 사용자 위치 훅
   const { userLocation, isLoading: isLocationLoading, error: locationError, requestLocation } = useUserLocation();
@@ -90,7 +104,7 @@ const MapContainer: React.FC = () => {
             disableClickZoom={false}
             styles={CLUSTER_STYLES}
           >
-            {mockMissingPersons.map((person) => (
+            {recentMissingPersons.map((person) => (
               <CustomOverlayMap
                 key={person.id}
                 position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
@@ -119,7 +133,7 @@ const MapContainer: React.FC = () => {
           </MarkerClusterer>
         ) : (
           // 개별 마커 모드: 커스텀 마커 사용
-          mockMissingPersons.map((person) => (
+          recentMissingPersons.map((person) => (
             <CustomOverlayMap
               key={person.id}
               position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
@@ -133,6 +147,20 @@ const MapContainer: React.FC = () => {
               />
             </CustomOverlayMap>
           ))
+        )}
+
+        {/* 선택된 실종자의 도보 범위 원 (실제 지리적 거리) */}
+        {selectedPerson && (
+          <Circle
+            center={{ lat: selectedPerson.coordinates.lat, lng: selectedPerson.coordinates.lng }}
+            radius={getDynamicWalkingDistance(selectedPerson.age, selectedPerson.lastSeenDate)}
+            strokeWeight={2}
+            strokeColor="#3b82f6"
+            strokeOpacity={0.8}
+            strokeStyle="solid"
+            fillColor="#3b82f6"
+            fillOpacity={0.1}
+          />
         )}
       </Map>
 
@@ -187,7 +215,7 @@ const MapContainer: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         person={selectedPerson}
-        onReport={handleReport}
+        elapsedTime={selectedPersonElapsedTime}
       />
     </div>
   );

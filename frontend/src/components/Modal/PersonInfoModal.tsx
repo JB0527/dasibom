@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ModalBase from './ModalBase';
+import WalkingRangeMap from '../Map/WalkingRange';
 import type { MissingPerson } from '../../types/missingPerson';
 import { calculateElapsedTime } from '../../utils/timeUtils';
 
@@ -7,16 +9,65 @@ interface PersonInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   person: MissingPerson | null;
-  onReport: () => void;
+  elapsedTime?: { formatted: string } | null; // 실제 지도에서 계산된 시간을 받음
 }
 
 const PersonInfoModal: React.FC<PersonInfoModalProps> = ({ 
   isOpen, 
   onClose, 
-  person, 
-  onReport 
+  person,
+  elapsedTime: propElapsedTime
 }) => {
+  const navigate = useNavigate();
+  
+  // props로 받은 시간이 있으면 사용, 없으면 자체 계산
+  const [elapsedTime, setElapsedTime] = useState(
+    propElapsedTime || calculateElapsedTime(person?.lastSeenDate || '')
+  );
+  
   console.log('PersonInfoModal 렌더링:', { isOpen, person });
+
+  // props로 시간을 받지 않은 경우에만 자체 타이머 사용
+  useEffect(() => {
+    if (!person || propElapsedTime) return;
+    
+    const interval = setInterval(() => {
+      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [person?.lastSeenDate, propElapsedTime]);
+
+  // props로 받은 시간이 변경되면 상태 업데이트
+  useEffect(() => {
+    if (propElapsedTime) {
+      setElapsedTime(propElapsedTime);
+    }
+  }, [propElapsedTime]);
+
+  const handleReport = () => {
+    if (person) {
+      navigate(`/report/${person.id}`);
+    }
+  };
+
+  const handleShare = () => {
+    if (!person) return;
+    
+    const shareText = `${person.name} 실종자 정보\n나이: ${person.age}세\n실종일시: ${new Date(person.lastSeenDate).toLocaleString('ko-KR')}\n실종장소: ${person.lastSeenLocation}\n경과시간: ${elapsedTime.formatted}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: '실종자 정보',
+        text: shareText,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('실종자 정보가 클립보드에 복사되었습니다.');
+      });
+    }
+  };
 
   if (!person) {
     console.log('person이 없어서 모달 렌더링 안함');
@@ -33,7 +84,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
         {/* 경과 시간 */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">실종 후 경과시간</span>
-          <span className="text-red-500 font-semibold">{calculateElapsedTime(person.lastSeenDate).formatted}</span>
+          <span className="text-red-500 font-semibold font-mono">{elapsedTime.formatted}</span>
         </div>
 
         {/* 기본 정보 */}
@@ -69,7 +120,14 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">발생일시</span>
-              <span>{person.lastSeenDate}</span>
+              <span>{new Date(person.lastSeenDate).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">발생장소</span>
@@ -98,13 +156,26 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
           </div>
         </div>
 
-        {/* 신고 버튼 */}
-        <button
-          onClick={onReport}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-        >
-          신고하기
-        </button>
+        {/* 도보 이동 범위 지도 */}
+        <div className="pt-4 border-t">
+          <WalkingRangeMap person={person} />
+        </div>
+
+        {/* 액션 버튼들 */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleReport}
+            className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          >
+            신고하기
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+          >
+            공유하기
+          </button>
+        </div>
       </div>
     </ModalBase>
   );
