@@ -1,10 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { MissingPerson } from '../types/missingPerson';
+import { calculateElapsedTime } from '../utils/timeUtils';
 
 export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPerson[]) => {
   const [selectedPerson, setSelectedPerson] = useState<MissingPerson | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+  const [selectedPersonElapsedTime, setSelectedPersonElapsedTime] = useState<{ formatted: string } | null>(null);
+
+  // 선택된 실종자의 경과시간을 실시간으로 업데이트
+  useEffect(() => {
+    if (!selectedPerson) return;
+    
+    const interval = setInterval(() => {
+      setSelectedPersonElapsedTime(calculateElapsedTime(selectedPerson.lastSeenDate));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedPerson]);
 
   // 겹친 마커들을 찾는 함수
   const findNearbyMarkers = (clickedPerson: MissingPerson) => {
@@ -64,20 +77,15 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
     setIsModalOpen(false);
     setSelectedPerson(null);
     setSelectedMarkerId(null);
-  };
-
-  const handleReport = () => {
-    // 신고 페이지로 이동
-    console.log('신고하기 클릭:', selectedPerson);
-    // router.push(`/report/${selectedPerson?.id}`);
+    setSelectedPersonElapsedTime(null);
   };
 
   return {
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
+    selectedPersonElapsedTime,
     handleMarkerClick,
-    handleCloseModal,
-    handleReport
+    handleCloseModal
   };
 };
