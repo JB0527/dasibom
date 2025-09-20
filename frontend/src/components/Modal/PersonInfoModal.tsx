@@ -51,6 +51,24 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
     }
   };
 
+  const handleShare = () => {
+    if (!person) return;
+    
+    const shareText = `${person.name} 실종자 정보\n나이: ${person.age}세\n실종일시: ${new Date(person.lastSeenDate).toLocaleString('ko-KR')}\n실종장소: ${person.lastSeenLocation}\n경과시간: ${elapsedTime.formatted}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: '실종자 정보',
+        text: shareText,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('실종자 정보가 클립보드에 복사되었습니다.');
+      });
+    }
+  };
+
   if (!person) {
     console.log('person이 없어서 모달 렌더링 안함');
     return null;
@@ -102,7 +120,14 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">발생일시</span>
-              <span>{person.lastSeenDate}</span>
+              <span>{new Date(person.lastSeenDate).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">발생장소</span>
@@ -136,13 +161,21 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
           <WalkingRangeMap person={person} />
         </div>
 
-        {/* 신고 버튼 */}
-        <button
-          onClick={handleReport}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-        >
-          신고하기
-        </button>
+        {/* 액션 버튼들 */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleReport}
+            className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          >
+            신고하기
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+          >
+            공유하기
+          </button>
+        </div>
       </div>
     </ModalBase>
   );

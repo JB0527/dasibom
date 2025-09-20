@@ -14,12 +14,17 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
   const [walkingDistance, setWalkingDistance] = React.useState(
     getDynamicWalkingDistance(person.age, person.lastSeenDate)
   );
+  const [elapsedHours, setElapsedHours] = React.useState(
+    Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60))
+  );
+  const [isUserInteracting, setIsUserInteracting] = React.useState(false);
   
-  // 실시간으로 도보 범위 업데이트 (1분마다)
+  // 실시간으로 도보 범위와 경과 시간 업데이트 (1초마다)
   useEffect(() => {
     const interval = setInterval(() => {
       setWalkingDistance(getDynamicWalkingDistance(person.age, person.lastSeenDate));
-    }, 60000); // 1분마다 업데이트
+      setElapsedHours(Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60)));
+    }, 1000); // 1초마다 업데이트
 
     return () => clearInterval(interval);
   }, [person.age, person.lastSeenDate]);
@@ -27,8 +32,9 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
   const radiusText = `${(walkingDistance / 1000).toFixed(1)}km`;
   const areaText = `${(Math.PI * walkingDistance * walkingDistance / 1000000).toFixed(1)}km²`;
 
+  // 초기 지도 설정 (한 번만 실행)
   useEffect(() => {
-    if (mapRef.current && person.coordinates) {
+    if (mapRef.current && person.coordinates && !isUserInteracting) {
       // 기존 지도에서 받은 실종 장소 좌표 사용
       const center = new window.kakao.maps.LatLng(
         person.coordinates.lat, 
@@ -42,7 +48,26 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
                        walkingDistance > 2000 ? 10 : 11;
       mapRef.current.setLevel(zoomLevel);
     }
-  }, [person.coordinates, walkingDistance]);
+  }, [person.coordinates]); // walkingDistance 의존성 제거
+
+  // 사용자 상호작용 감지
+  useEffect(() => {
+    if (mapRef.current) {
+      const map = mapRef.current;
+      
+      const handleDragStart = () => setIsUserInteracting(true);
+      const handleZoomStart = () => setIsUserInteracting(true);
+      
+      // 사용자가 드래그나 줌을 시작하면 상호작용 상태로 설정
+      kakao.maps.event.addListener(map, 'dragstart', handleDragStart);
+      kakao.maps.event.addListener(map, 'zoom_start', handleZoomStart);
+      
+      return () => {
+        kakao.maps.event.removeListener(map, 'dragstart', handleDragStart);
+        kakao.maps.event.removeListener(map, 'zoom_start', handleZoomStart);
+      };
+    }
+  }, [mapRef.current]);
 
   return (
     <div className={`bg-gray-50 rounded-lg overflow-hidden ${className}`}>
@@ -68,22 +93,25 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
             mapRef.current = map;
           }}
         >
-          {/* 실종 장소 마커 (정확한 좌표에 표시) */}
+          {/* 실종자 마커 (실제 지도와 동일한 스타일) */}
           <CustomOverlayMap
             position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
             yAnchor={1}
+            xAnchor={0.5}
           >
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                backgroundColor: '#ef4444',
-                border: '3px solid white',
-                borderRadius: '50%',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                cursor: 'pointer'
-              }}
-            />
+            <div className="relative">
+              {/* 프로필 이미지 */}
+              <img
+                src={person.photo || `https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+                alt={person.name}
+                className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-lg"
+              />
+              
+              {/* 실시간 경과 시간 표시 (프로필 이미지 아래) */}
+              <div className="mt-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full text-center font-mono shadow-md">
+                {elapsedHours}h
+              </div>
+            </div>
           </CustomOverlayMap>
           
           {/* 도보 범위 원 (나이 기반) */}

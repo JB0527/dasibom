@@ -18,9 +18,11 @@ export const useMissingPerson = () => {
       // const result = await missingPersonApi.getMissingPersons();
       const result = mockMissingPersons;
       setMissingPersons(result);
+      return result; // 반환값 추가
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '실종자 정보 조회 중 오류가 발생했습니다.';
       setError(errorMessage);
+      return []; // 에러 시 빈 배열 반환
     } finally {
       setIsLoading(false);
     }

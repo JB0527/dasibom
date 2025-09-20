@@ -79,7 +79,7 @@ export const getCircleSizeByAge = (age: number, mapLevel: number = 3): number =>
 };
 
 /**
- * 나이와 실종 경과 시간을 고려한 동적 도보 예측 거리 계산
+ * 나이와 실종 경과 시간을 고려한 동적 도보 예측 거리 계산 (하이브리드 방식)
  * @param age 나이
  * @param lastSeenDate 실종일시
  * @returns 동적 도보 예측 거리 (미터)
@@ -104,14 +104,27 @@ export const getDynamicWalkingDistance = (age: number, lastSeenDate: string): nu
   // 최소 1시간, 최대 72시간(3일)으로 제한
   const realisticHours = Math.min(72, Math.max(1, hoursElapsed));
   
-  // 시간이 지날수록 이동 가능 거리 증가 (비선형 증가)
-  // 초기에는 빠르게 증가하다가 점점 완만해짐
-  const timeMultiplier = Math.sqrt(realisticHours); // 제곱근으로 비선형 증가
+  // 하이브리드 방식: 초기 선형, 후기 비선형
+  let walkingDistance: number;
   
-  // 최종 도보 거리 계산 (미터 단위)
-  const walkingDistance = baseSpeed * timeMultiplier * 1000;
+  if (realisticHours <= 6) {
+    // 초기 6시간: 선형 증가 (신선한 상태, 빠른 이동)
+    walkingDistance = baseSpeed * realisticHours;
+  } else {
+    // 6시간 이후: 비선형 증가 (피로도 고려, 최저 속도 보장)
+    const linearDistance = baseSpeed * 6; // 6시간까지의 선형 거리
+    const remainingHours = realisticHours - 6;
+    
+    // 최저 속도 보장 (기본 속도의 30%)
+    const minSpeed = baseSpeed * 0.3;
+    const currentSpeed = Math.max(minSpeed, baseSpeed * (1 / Math.sqrt(remainingHours + 1)));
+    
+    const additionalDistance = currentSpeed * remainingHours;
+    walkingDistance = linearDistance + additionalDistance;
+  }
   
-  return Math.round(walkingDistance);
+  // 미터 단위로 변환
+  return Math.round(walkingDistance * 1000);
 };
 
 /**

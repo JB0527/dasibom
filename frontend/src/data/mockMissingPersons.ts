@@ -11,7 +11,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 60,
     build: '보통 이상',
     faceShape: '갸름한형',
-    lastSeenDate: '2025-09-18T21:00:00', // 21:00 실종 (1시간 28분 전)
+    lastSeenDate: '2025-09-19T21:00:00', // 21:00 실종 (1시간 28분 전)
     lastSeenLocation: '서울 강남구 테헤란로 123',
     photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5663, lng: 126.9779 }
@@ -25,7 +25,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 70,
     build: '보통',
     faceShape: '둥근형',
-    lastSeenDate: '2025-09-18T18:00:00', // 18:00 실종 (4시간 28분 전)
+    lastSeenDate: '2025-09-19T18:00:00', // 18:00 실종 (4시간 28분 전)
     lastSeenLocation: '서울 종로구 인사동길 12',
     photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5735, lng: 126.9788 }
@@ -39,7 +39,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 55,
     build: '마른 편',
     faceShape: '계란형',
-    lastSeenDate: '2025-09-18T15:00:00', // 15:00 실종 (7시간 28분 전)
+    lastSeenDate: '2025-09-19T15:00:00', // 15:00 실종 (7시간 28분 전)
     lastSeenLocation: '서울 마포구 홍대입구역 2번 출구',
     photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5563, lng: 126.9226 }
@@ -53,7 +53,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 75,
     build: '건장한 편',
     faceShape: '사각형',
-    lastSeenDate: '2025-09-18T10:00:00', // 10:00 실종 (12시간 28분 전)
+    lastSeenDate: '2025-09-19T10:00:00', // 10:00 실종 (12시간 28분 전)
     lastSeenLocation: '서울 중구 을지로 285',
     photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5667, lng: 126.9782 }
@@ -67,7 +67,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 50,
     build: '마른 편',
     faceShape: '계란형',
-    lastSeenDate: '2025-09-18T08:00:00', // 08:00 실종 (14시간 28분 전)
+    lastSeenDate: '2025-09-19T08:00:00', // 08:00 실종 (14시간 28분 전)
     lastSeenLocation: '서울 중구 을지로 290',
     photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5669, lng: 126.9784 }
@@ -81,7 +81,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 80,
     build: '보통',
     faceShape: '둥근형',
-    lastSeenDate: '2025-09-18T06:00:00', // 06:00 실종 (16시간 28분 전)
+    lastSeenDate: '2025-09-19T06:00:00', // 06:00 실종 (16시간 28분 전)
     lastSeenLocation: '서울 종로구 종로 130',
     photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5737, lng: 126.9790 }
@@ -95,7 +95,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 58,
     build: '보통',
     faceShape: '갸름한형',
-    lastSeenDate: '2025-09-18T02:00:00', // 02:00 실종 (20시간 28분 전)
+    lastSeenDate: '2025-09-20T02:00:00', // 02:00 실종 (20시간 28분 전)
     lastSeenLocation: '서울 종로구 종로 135',
     photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5739, lng: 126.9792 }
@@ -109,7 +109,7 @@ export const mockMissingPersons: MissingPerson[] = [
     weight: 85,
     build: '건장한 편',
     faceShape: '사각형',
-    lastSeenDate: '2025-09-18T00:00:00', // 00:00 실종 (22시간 28분 전)
+    lastSeenDate: '2025-09-20T00:00:00', // 00:00 실종 (22시간 28분 전)
     lastSeenLocation: '서울 강남구 테헤란로 460',
     photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
     coordinates: { lat: 37.5665, lng: 126.9785 }
