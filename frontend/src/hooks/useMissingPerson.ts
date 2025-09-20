@@ -1,6 +1,6 @@
 // 실종자 정보 관련 훅
 import { useState } from 'react';
-import { missingPersonApi } from '../api/missingPerson';
+// import { missingPersonApi } from '../api/missingPerson';
 import { mockMissingPersons } from '../data/mockMissingPersons';
 import type { MissingPerson } from '../types/missingPerson';
 

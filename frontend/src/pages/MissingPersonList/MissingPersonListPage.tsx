@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useMissingPerson } from '../../hooks/useMissingPerson';
 import { MissingPersonCard } from '../../components/MissingPerson/MissingPersonCard';
 import type { MissingPerson } from '../../types/missingPerson';
 
 const MissingPersonListPage: React.FC = () => {
-  const navigate = useNavigate();
   const { fetchMissingPersons } = useMissingPerson();
   const [missingPersons, setMissingPersons] = useState<MissingPerson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
