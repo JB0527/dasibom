@@ -1,12 +1,15 @@
 // 신고 페이지
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ReportForm } from '../../components/Report/ReportForm';
 import { useMissingPerson } from '../../hooks/useMissingPerson';
 import type { MissingPerson } from '../../types/missingPerson';
 
-export const ReportPage: React.FC = () => {
-  const { missingPersonId } = useParams<{ missingPersonId: string }>();
+interface ReportPageProps {
+  missingPersonId?: string;
+}
+
+export const ReportPage: React.FC<ReportPageProps> = ({ missingPersonId }) => {
   const navigate = useNavigate();
   const { getMissingPersonById } = useMissingPerson();
   const [missingPerson, setMissingPerson] = useState<MissingPerson | null>(null);
@@ -39,7 +42,7 @@ export const ReportPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">실종자 정보를 불러오는 중...</p>
@@ -50,7 +53,7 @@ export const ReportPage: React.FC = () => {
 
   if (!missingPerson) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">실종자 정보를 찾을 수 없습니다</h1>
@@ -68,7 +71,7 @@ export const ReportPage: React.FC = () => {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-full bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto text-center p-6">
           <div className="text-green-500 text-6xl mb-4">✅</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">신고가 성공적으로 제출되었습니다</h1>
@@ -93,7 +96,7 @@ export const ReportPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
       {/* 헤더 */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
