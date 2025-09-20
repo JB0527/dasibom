@@ -7,8 +7,6 @@ interface UserLocationMarkerProps {
 }
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
-  lat, 
-  lng, 
   accuracy 
 }) => {
   return (

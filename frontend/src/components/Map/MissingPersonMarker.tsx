@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
+import { calculateElapsedTime } from '../../utils/timeUtils';
 import type { MissingPerson } from '../../types/missingPerson';
 
 interface MissingPersonMarkerProps {
@@ -25,7 +25,7 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
   }, [person.lastSeenDate]);
 
   // 나이와 실종 경과 시간을 고려한 동적 도보 거리 계산
-  const dynamicWalkingDistance = getDynamicWalkingDistance(person.age, person.lastSeenDate);
+  // const dynamicWalkingDistance = getDynamicWalkingDistance(person.age, person.lastSeenDate);
 
   // 기본 프로필 이미지
   const defaultPhoto = 'https://via.placeholder.com/60x60/4F46E5/FFFFFF?text=' + person.name.charAt(0);

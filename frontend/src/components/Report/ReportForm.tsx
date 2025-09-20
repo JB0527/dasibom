@@ -34,8 +34,7 @@ const certaintyOptions: CertaintyOption[] = [
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
   missingPerson, 
-  onSuccess, 
-  onCancel 
+  onSuccess 
 }) => {
   const { submitReport, isSubmitting, error } = useReport();
   const [formData, setFormData] = useState<Partial<ReportFormData>>({
