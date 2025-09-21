@@ -1,5 +1,5 @@
 # Frontend Dockerfile for React/Vue.js application
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -15,15 +15,7 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Use vite preview to serve the built files
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "80"]
