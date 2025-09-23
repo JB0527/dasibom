@@ -1,0 +1,119 @@
+# ===============================
+# OS / Editor
+# ===============================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ===============================
+# IDEs
+# ===============================
+# IntelliJ
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# VS Code
+.vscode/
+
+# STS (Spring Tools)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+nb-configuration.xml
+
+# ===============================
+# Gradle
+# ===============================
+.gradle/
+build/
+**/build/
+# Keep Gradle wrapper
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+gradle-app.setting
+
+# ===============================
+# Java / Kotlin Artifacts
+# ===============================
+*.class
+# If you don't want jar/war/ear in repo:
+*.jar
+*.war
+*.ear
+# JVM crash / heap dumps
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# ===============================
+# Logs / Runtime
+# ===============================
+logs/
+*.log
+*.pid
+*.pid.lock
+nohup.out
+
+# ===============================
+# Test / Coverage / Reports
+# ===============================
+coverage/
+test-results/
+reports/
+.jacoco/
+jacoco.exec
+
+# ===============================
+# Sonar / Static Analysis
+# ===============================
+.scannerwork/
+
+# ===============================
+# Environment / Secrets
+# ===============================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+
+# ===============================
+# Uploads / Local Storage (adjust as needed)
+# ===============================
+uploads/
+public/uploads/
+storage/
+runtime/
+tmp/
+.temp/
+
+# ===============================
+# Docs
+# ===============================
+# 정말 모든 .md를 무시하려면 아래를 해제하세요:
+*.md
+!README.md

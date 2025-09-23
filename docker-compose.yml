@@ -1,77 +1,111 @@
-version: '3.8'
-
 services:
-  # Database
+  # PostgreSQL with PostGIS
   database:
-    image: mysql:8.0
+    image: postgis/postgis:16-3.4
     container_name: dasibom-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: dasibom
-      MYSQL_USER: dasibom_user
-      MYSQL_PASSWORD: dasibom_password
+      POSTGRES_DB: ${DB_NAME:-dasibom}
+      POSTGRES_USER: ${DB_USERNAME:-dasibom_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasibom_password}
+      TZ: Asia/Seoul
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dasibom_user} -d ${POSTGRES_DB:-dasibom}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - dasibom-network
     restart: unless-stopped
 
-  # Backend Service
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: dasibom-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Spring Boot Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: dasibom-backend
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - DB_HOST=database
-      - DB_PORT=3306
-      - DB_NAME=dasibom
-      - DB_USERNAME=dasibom_user
-      - DB_PASSWORD=dasibom_password
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dasibom}
+      DB_USERNAME: ${DB_USERNAME:-dasibom_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dasibom_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_PORT: 8080
+      # JVM options for production
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1024m
+        -XX:+UseG1GC
+        -XX:G1HeapRegionSize=16m
+        -XX:+UseStringDeduplication
+        -Djava.security.egd=file:/dev/./urandom
     ports:
-      - "8080:8080"
-    depends_on:
-      - database
-    networks:
-      - dasibom-network
-    restart: unless-stopped
+      - "${APP_PORT:-8080}:8080"
     volumes:
-      - ./backend/logs:/app/logs
-
-  # Frontend Service
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: dasibom-frontend
-    ports:
-      - "3000:80"
+      - ./logs:/app/logs
     depends_on:
-      - backend
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - dasibom-network
     restart: unless-stopped
 
-  # Redis (for caching/session management)
-  redis:
-    image: redis:7-alpine
-    container_name: dasibom-redis
-    ports:
-      - "6379:6379"
-    networks:
-      - dasibom-network
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
+  # Nginx (Optional - uncomment if needed)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: dasibom-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+  #     - ./nginx/ssl:/etc/nginx/ssl
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - dasibom-network
+  #   restart: unless-stopped
 
 networks:
   dasibom-network:
     driver: bridge
 
 volumes:
-  mysql_data:
+  postgres_data:
+    driver: local
   redis_data:
+    driver: local
