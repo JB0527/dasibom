@@ -1,0 +1,20 @@
+# AWS Bedrock 기반 실종자 찾기 AI 시스템
+# 필수 패키지 목록
+
+# AWS SDK
+boto3>=1.34.0
+botocore>=1.34.0
+
+# 이미지 처리
+Pillow>=10.0.0
+numpy>=1.24.0
+opencv-python>=4.8.0
+
+# 기타 유틸리티
+python-dateutil>=2.8.0
+requests>=2.31.0
+
+# 선택적 패키지 (로컬 처리용)
+# torch>=2.0.0  # GPU 처리가 필요한 경우만
+# torchvision    # GPU 처리가 필요한 경우만
+# insightface    # 로컬 얼굴 교체가 필요한 경우만
