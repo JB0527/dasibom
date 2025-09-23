@@ -1,37 +1,51 @@
-# Backend Dockerfile for Spring Boot application
-FROM eclipse-temurin:17-jdk-alpine AS builder
+# Multi-stage build for Java 21 + Gradle
+FROM gradle:8.5-jdk21 AS builder
 
+# Set working directory
 WORKDIR /app
 
-# Copy Gradle files
-COPY gradlew build.gradle settings.gradle ./
+# Copy Gradle configuration files
+COPY build.gradle settings.gradle ./
 COPY gradle/ gradle/
 
-# Download dependencies
-RUN ./gradlew dependencies --no-daemon
+# Download dependencies (for better layer caching)
+RUN gradle dependencies --no-daemon
 
 # Copy source code
 COPY src/ src/
 
 # Build the application
-RUN ./gradlew build --no-daemon -x test
+RUN gradle bootJar --no-daemon
 
-# Production stage
-FROM eclipse-temurin:17-jre-alpine
+# Runtime stage
+FROM openjdk:21-jdk-slim
 
-WORKDIR /app
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r spring && useradd -r -g spring spring
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy JAR file from builder stage
+# Set working directory
+WORKDIR /app
+
+# Copy built jar from builder stage
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# Change ownership
-RUN chown spring:spring app.jar
+# Change ownership to non-root user
+RUN chown -R appuser:appuser /app
 
-USER spring:spring
+# Switch to non-root user
+USER appuser
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Expose port
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the application
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

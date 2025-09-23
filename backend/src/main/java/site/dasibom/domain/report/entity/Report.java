@@ -1,0 +1,62 @@
+package site.dasibom.domain.report.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import site.dasibom.global.common.BaseEntity;
+import site.dasibom.domain.common.enums.ReportCertainty;
+import site.dasibom.domain.common.enums.ProviderType;
+import site.dasibom.domain.missingcase.entity.MissingCase;
+// import org.locationtech.jts.geom.Point;
+
+import java.time.LocalDateTime;
+
+@Getter 
+@Setter 
+@NoArgsConstructor
+@Entity 
+@Table(name="report")
+public class Report extends BaseEntity {
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id", nullable = false)
+    private MissingCase missingCase;
+
+    @Column(nullable = false)
+    private LocalDateTime reportedAt = LocalDateTime.now(); // 제보시각
+    
+    @Column(nullable = false)
+    private LocalDateTime sightedAt; // 목격시각
+    
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String sightingAddress; // 목격장소주소
+    
+    private Double locationLat; // 목격위치 위도
+    private Double locationLon; // 목격위치 경도
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ReportCertainty certainty = ReportCertainty.LIKELY; // 확신도
+    
+    @Column(columnDefinition = "TEXT")
+    private String description; // 제보내용
+    
+    @Column(length = 500)
+    private String attachmentUrl; // 첨부파일URL
+
+    // 본인인증 메타
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProviderType verifiedProvider = ProviderType.PASS; // 인증수단
+    
+    @Column(nullable = false, length = 64)
+    private String verifiedPhoneHash; // 전화번호해시
+    
+    @Column(nullable = false)
+    private LocalDateTime verifiedAt = LocalDateTime.now(); // 인증시각
+    
+    @Column(length = 64)
+    private String verificationRef; // 외부참조ID
+}
