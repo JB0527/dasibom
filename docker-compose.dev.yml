@@ -1,63 +1,119 @@
-version: '3.8'
-
 services:
-  # Development Database
+  # PostgreSQL with PostGIS for Development
   database:
-    image: mysql:8.0
+    image: postgis/postgis:16-3.4
     container_name: dasibom-db-dev
     environment:
-      MYSQL_ROOT_PASSWORD: devpassword
-      MYSQL_DATABASE: dasibom_dev
-      MYSQL_USER: dev_user
-      MYSQL_PASSWORD: dev_password
+      POSTGRES_DB: ${DB_NAME:-dasibom_dev}
+      POSTGRES_USER: ${DB_USERNAME:-dev_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password}
+      TZ: Asia/Seoul
     ports:
-      - "3307:3306"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - mysql_dev_data:/var/lib/mysql
+      - postgres_dev_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/dev-data:/docker-entrypoint-initdb.d/dev-data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dev_user} -d ${POSTGRES_DB:-dasibom_dev}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
     networks:
       - dasibom-dev-network
 
-  # Backend Development (with volume mounting for hot reload)
-  backend-dev:
+  # Redis for Development
+  redis:
+    image: redis:7-alpine
+    container_name: dasibom-redis-dev
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dasibom-dev-network
+
+  # Spring Boot Backend for Development
+  backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      args:
+        - BUILD_MODE=development
     container_name: dasibom-backend-dev
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - DB_HOST=database
-      - DB_PORT=3306
-      - DB_NAME=dasibom_dev
-      - DB_USERNAME=dev_user
-      - DB_PASSWORD=dev_password
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dasibom_dev}
+      DB_USERNAME: ${DB_USERNAME:-dev_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dev_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_PORT: 8080
+      # JVM options for development (more debugging, less optimization)
+      JAVA_OPTS: >-
+        -Xms256m
+        -Xmx512m
+        -XX:+UseG1GC
+        -Dspring.devtools.restart.enabled=true
+        -Dspring.devtools.livereload.enabled=true
+        -Djava.security.egd=file:/dev/./urandom
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
-      - "8081:8080"
+      - "${APP_PORT:-8080}:8080"
       - "5005:5005"  # Debug port
     volumes:
-      - ./backend:/app
-      - /app/build  # Exclude build directory
+      - ./backend/src:/app/src:ro  # Read-only source mounting for hot reload
+      - ./logs:/app/logs
+      - gradle_cache:/home/gradle/.gradle  # Cache Gradle dependencies
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # Longer start period for development
+    networks:
+      - dasibom-dev-network
+    stdin_open: true
+    tty: true
+
+  # MailHog for Development (Email testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: dasibom-mailhog-dev
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
     networks:
       - dasibom-dev-network
 
-  # Frontend Development (with volume mounting for hot reload)
-  frontend-dev:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: dasibom-frontend-dev
+  # pgAdmin for Development (Database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: dasibom-pgadmin-dev
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_API_URL=http://localhost:8081
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@dasibom.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "3001:3000"
+      - "5050:80"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules  # Exclude node_modules
+      - pgadmin_dev_data:/var/lib/pgadmin
     depends_on:
-      - backend-dev
+      - database
     networks:
       - dasibom-dev-network
 
@@ -66,4 +122,11 @@ networks:
     driver: bridge
 
 volumes:
-  mysql_dev_data:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+  gradle_cache:
+    driver: local
