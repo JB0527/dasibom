@@ -29,19 +29,19 @@ public class MissingCaseService {
     @Transactional
     public CaseResponse create(CreateCaseRequest req) {
         MissingCase mc = new MissingCase();
-        mc.setNm(req.name()); 
+        mc.setNm(req.name());
         mc.setOccrAdres(req.address());
-        mc.setOccurLat(req.occurLat()); 
+        mc.setOccurLat(req.occurLat());
         mc.setOccurLon(req.occurLon());
         return CaseResponse.from(repo.save(mc));
     }
-    
-    public CaseResponse get(Long id) { 
-        return CaseResponse.from(repo.findById(id).orElseThrow()); 
+
+    public CaseResponse get(Long id) {
+        return CaseResponse.from(repo.findById(id).orElseThrow());
     }
-    
-    public List<CaseResponse> list() { 
-        return repo.findAll().stream().map(CaseResponse::from).toList(); 
+
+    public List<CaseResponse> list() {
+        return repo.findAll().stream().map(CaseResponse::from).toList();
     }
     
     /**
