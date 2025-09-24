@@ -3,15 +3,15 @@ spring:
     name: dasibom
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dasibom}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update           
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -20,17 +20,44 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:redis}
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      # password: ${REDIS_PASSWORD:}  # 비밀번호 쓰면 주석 해제
 
 server:
   port: ${APP_PORT:8080}
 
-ml:
-  base-url: ${ML_BASE_URL:http://localhost:8000}
+# External API Configuration
+external:
+  safe182:
+    base-url: ${SAFE182_BASE_URL:https://www.safe182.go.kr}
+    auth-key: ${SAFE182_AUTH_KEY}
+    esntl-id: ${SAFE182_ESNTL_ID}
+    scheduler:
+      enabled: ${SAFE182_SCHEDULER_ENABLED:true}
+      fixed-rate: ${SAFE182_SCHEDULER_FIXED_RATE:300000}  # 5� = 300,000ms
+      initial-delay: ${SAFE182_SCHEDULER_INITIAL_DELAY:60000}  # 1� = 60,000ms
 
+# Security Configuration
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+  cors:
+    origins: ${CORS_ORIGINS}
+
+# Logging Configuration
 logging:
   level:
+    root: ${LOG_LEVEL:INFO}
     org.hibernate.SQL: info
     org.springframework: info
+    site.dasibom: debug
+
+# AWS Configuration (if needed)
+aws:
+  region: ${AWS_REGION}
+  s3:
+    bucket: ${AWS_S3_BUCKET_NAME}
+
+# Application Configuration
+app:
+  url: ${APP_URL}
