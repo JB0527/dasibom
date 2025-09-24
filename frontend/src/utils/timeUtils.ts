@@ -9,12 +9,22 @@ export interface TimeElapsed {
 }
 
 /**
+ * YYYYMMDD 형식의 날짜를 Date 객체로 변환
+ */
+export const parseOccurDate = (occurDate: string): Date => {
+  const year = parseInt(occurDate.substring(0, 4));
+  const month = parseInt(occurDate.substring(4, 6)) - 1; // 월은 0부터 시작
+  const day = parseInt(occurDate.substring(6, 8));
+  return new Date(year, month, day);
+};
+
+/**
  * 실종 시간으로부터 경과된 시간을 계산
- * @param lastSeenDate 실종일시 (ISO 8601 형식: YYYY-MM-DDTHH:mm:ss)
+ * @param occurDate 실종일시 (YYYYMMDD 형식)
  * @returns 경과된 시간 정보
  */
-export const calculateElapsedTime = (lastSeenDate: string): TimeElapsed => {
-  const lastSeen = new Date(lastSeenDate);
+export const calculateElapsedTime = (occurDate: string): TimeElapsed => {
+  const lastSeen = parseOccurDate(occurDate);
   const now = new Date();
   
   const diffMs = now.getTime() - lastSeen.getTime();
@@ -79,26 +89,17 @@ export const getCircleSizeByAge = (age: number, mapLevel: number = 3): number =>
 };
 
 /**
- * 나이와 실종 경과 시간을 고려한 동적 도보 예측 거리 계산 (하이브리드 방식)
- * @param age 나이
- * @param lastSeenDate 실종일시
+ * 실종 경과 시간을 고려한 동적 도보 예측 거리 계산 (하이브리드 방식)
+ * @param occurDate 실종일시 (YYYYMMDD 형식)
  * @returns 동적 도보 예측 거리 (미터)
  */
-export const getDynamicWalkingDistance = (age: number, lastSeenDate: string): number => {
-  // 기본 나이별 도보 속도 (km/h)
-  let baseSpeed: number;
-  if (age < 10) baseSpeed = 2;      // 어린이: 2km/h
-  else if (age < 20) baseSpeed = 4; // 청소년: 4km/h
-  else if (age < 30) baseSpeed = 5; // 20대: 5km/h (가장 활발)
-  else if (age < 40) baseSpeed = 4.5; // 30대: 4.5km/h
-  else if (age < 50) baseSpeed = 3.5; // 40대: 3.5km/h
-  else if (age < 60) baseSpeed = 3;   // 50대: 3km/h
-  else if (age < 70) baseSpeed = 2.5; // 60대: 2.5km/h
-  else baseSpeed = 2;                 // 70대 이상: 2km/h
+export const getDynamicWalkingDistance = (occurDate: string): number => {
+  // 기본 도보 속도 (km/h) - 평균 성인 기준
+  const baseSpeed = 4; // 4km/h
 
   // 실종 경과 시간 계산 (시간 단위)
   const now = new Date();
-  const missingDate = new Date(lastSeenDate);
+  const missingDate = parseOccurDate(occurDate);
   const hoursElapsed = (now.getTime() - missingDate.getTime()) / (1000 * 60 * 60);
   
   // 최소 1시간, 최대 72시간(3일)으로 제한
