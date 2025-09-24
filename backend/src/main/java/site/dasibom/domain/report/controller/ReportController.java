@@ -15,8 +15,8 @@ import java.util.List;
 public class ReportController {
     private final ReportService service;
     
-    @PostMapping 
-    public ApiResponse<ReportResponse> create(@RequestBody @Valid CreateReportRequest req) { 
+    @PostMapping(consumes = "multipart/form-data")
+    public ApiResponse<ReportResponse> create(@ModelAttribute @Valid CreateReportRequest req) { 
         return ApiResponse.ok(service.create(req)); 
     }
     
