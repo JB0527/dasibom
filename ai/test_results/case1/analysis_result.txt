@@ -1,0 +1,32 @@
+=== 인물 분석 결과 ===
+
+Q: What is this person wearing?
+A: 분석 실패
+
+Q: What color is their shirt or top?
+A: 분석 실패
+
+Q: What are they wearing on the bottom?
+A: 분석 실패
+
+Q: What kind of shoes do they have?
+A: 분석 실패
+
+Q: Do they have any bag or accessories?
+A: 분석 실패
+
+Q: What does their hair look like?
+A: 분석 실패
+
+Q: Are they male or female?
+A: 분석 실패
+
+Q: How old do they look?
+A: 분석 실패
+
+Q: Are they tall or short?
+A: 분석 실패
+
+Q: Any other notable features?
+A: 분석 실패
+
