@@ -84,21 +84,22 @@ services:
       - dasibom-network
     restart: unless-stopped
 
-  # Nginx (Optional - uncomment if needed)
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: dasibom-nginx
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-  #     - ./nginx/ssl:/etc/nginx/ssl
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - dasibom-network
-  #   restart: unless-stopped
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dasibom-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dasibom-network
+    restart: unless-stopped
 
 networks:
   dasibom-network:
