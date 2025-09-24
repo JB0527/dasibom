@@ -16,7 +16,7 @@ from typing import Dict, Optional, Tuple, List
 from s3_utils import S3Manager, generate_case_id
 
 class EnhancedBedrockCase2:
-    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         """케이스 2: 구조화된 정보 + 얼굴 사진 → 전신 생성 + 얼굴 합성"""
         print("🚀 AWS Bedrock Enhanced Case 2 초기화 중...")
         
@@ -471,7 +471,7 @@ def main():
     parser.add_argument("-i", "--info", required=True, help="인물 정보 JSON 파일 (로컬 경로)")
     parser.add_argument("-f", "--face", required=True, help="얼굴 참조 사진 (S3 URL, HTTP URL, 또는 로컬 경로)")
     parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
-    parser.add_argument("--bucket", "-b", default="dasibom-ai-results", help="S3 버킷명")
+    parser.add_argument("--bucket", "-b", default="seoul-ht-06-dasibom", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전")
     
     args = parser.parse_args()

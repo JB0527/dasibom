@@ -9,7 +9,7 @@ from typing import Dict, Optional, List
 from s3_utils import S3Manager, generate_case_id
 
 class BedrockMissingPersonCase3:
-    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         """AWS Bedrock 기반 케이스 3: CCTV + 얼굴 사진 → 보완 정보 추출 및 수사 보고서"""
         print("AWS Bedrock 클라이언트 초기화 중...")
         
@@ -413,7 +413,7 @@ def main():
     parser.add_argument("-f", "--face", help="얼굴 참조 사진 (S3 URL, HTTP URL, 또는 로컬 경로, 선택사항)")
     parser.add_argument("-k", "--known", help="기존 정보 JSON 파일 경로 (선택사항)")
     parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
-    parser.add_argument("--bucket", "-b", default="dasibom-ai-results", help="S3 버킷명")
+    parser.add_argument("--bucket", "-b", default="seoul-ht-06-dasibom", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전 (기본: us-east-1)")
     
     args = parser.parse_args()
