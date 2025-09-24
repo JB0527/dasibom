@@ -6,17 +6,33 @@ import argparse
 from PIL import Image
 from datetime import datetime
 from typing import Dict, Optional, List
+from s3_utils import S3Manager, generate_case_id
 
 class BedrockMissingPersonCase3:
-    def __init__(self, region_name='us-east-1'):
+    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
         """AWS Bedrock 기반 케이스 3: CCTV + 얼굴 사진 → 보완 정보 추출 및 수사 보고서"""
         print("AWS Bedrock 클라이언트 초기화 중...")
         
-        # Bedrock Runtime 클라이언트 초기화
+        # EC2 IAM 역할로 Bedrock Runtime 클라이언트 초기화
         self.bedrock_runtime = boto3.client(
             service_name='bedrock-runtime',
             region_name=region_name
         )
+        
+        # 인증 확인
+        try:
+            sts = boto3.client('sts', region_name=region_name)
+            identity = sts.get_caller_identity()
+            arn = identity.get('Arn', '')
+            if ':assumed-role/' in arn:
+                print(f"✅ Bedrock 클라이언트 EC2 IAM 역할로 초기화: {arn.split('/')[-2]}")
+            else:
+                print(f"✅ Bedrock 클라이언트 초기화 완료")
+        except Exception as e:
+            print(f"⚠️ 인증 확인 실패, 계속 진행: {e}")
+        
+        # S3 매니저 초기화
+        self.s3_manager = S3Manager(bucket_name, region_name)
         
         # 모델 ID
         self.claude_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
@@ -25,10 +41,9 @@ class BedrockMissingPersonCase3:
         print(f"Claude 모델: {self.claude_model_id}")
         print("초기화 완료!\n")
     
-    def encode_image(self, image_path: str) -> str:
-        """이미지를 base64로 인코딩"""
-        with open(image_path, "rb") as image_file:
-            return base64.b64decode(image_file.read()).decode('utf-8')
+    def encode_image(self, image_source: str) -> str:
+        """이미지를 base64로 인코딩 (S3, URL, 로컬 파일 지원)"""
+        return self.s3_manager.encode_image_from_source(image_source)
     
     def analyze_cctv_context(self, cctv_image_path: str) -> Optional[Dict]:
         """Claude를 사용하여 CCTV 이미지의 상황 맥락 분석"""
@@ -383,21 +398,22 @@ CCTV 영상과 관련 정보를 종합 분석한 결과입니다.
 ==========================================================
 """
         
-        # 보고서 파일 저장
-        report_path = os.path.join(output_dir, f"bedrock_investigation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        # S3에 보고서 저장
+        case_id = generate_case_id() if not hasattr(self, '_current_case_id') else self._current_case_id
+        report_s3_url = self.s3_manager.upload_text_to_s3(
+            report, case_id, f"investigation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt", "case3_investigation"
+        )
         
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write(report)
-        
-        print(f"종합 수사 보고서 저장: {report_path}")
-        return report_path
+        print(f"종합 수사 보고서 S3 저장: {report_s3_url}")
+        return report_s3_url
 
 def main():
     parser = argparse.ArgumentParser(description="AWS Bedrock 기반 실종자 찾기 AI - 케이스 3")
-    parser.add_argument("cctv_image", help="CCTV 이미지 경로")
-    parser.add_argument("-f", "--face", help="얼굴 참조 사진 경로 (선택사항)")
+    parser.add_argument("cctv_image", help="CCTV 이미지 (S3 URL, HTTP URL, 또는 로컬 경로)")
+    parser.add_argument("-f", "--face", help="얼굴 참조 사진 (S3 URL, HTTP URL, 또는 로컬 경로, 선택사항)")
     parser.add_argument("-k", "--known", help="기존 정보 JSON 파일 경로 (선택사항)")
-    parser.add_argument("--output", "-o", default="outputs", help="결과 저장 폴더")
+    parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
+    parser.add_argument("--bucket", "-b", default="dasibom-ai-results", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전 (기본: us-east-1)")
     
     args = parser.parse_args()
@@ -410,7 +426,12 @@ def main():
     print("CCTV + 얼굴 사진 → 보완 정보 추출 → 종합 수사 보고서\n")
     
     # 데모 실행
-    demo = BedrockMissingPersonCase3(region_name=args.region)
+    demo = BedrockMissingPersonCase3(region_name=args.region, bucket_name=args.bucket)
+    
+    # 케이스 ID 설정
+    case_id = args.case_id or generate_case_id()
+    demo._current_case_id = case_id
+    print(f"📋 케이스 ID: {case_id}")
     
     # 1단계: CCTV 상황 분석
     print("🔍 1단계: CCTV 상황 맥락 분석")
@@ -442,8 +463,9 @@ def main():
         args.output
     )
     
-    print(f"\n✅ 완료! 종합 수사 보고서가 생성되었습니다:")
-    print(f"📄 {report_path}")
+    print(f"\n🎉 완료! 종합 수사 보고서가 생성되었습니다:")
+    print(f"📋 케이스 ID: {case_id}")
+    print(f"📄 S3 보고서: {report_path}")
     
     if args.face:
         print(f"👤 얼굴 참조 사진 포함 분석 완료")
