@@ -30,6 +30,7 @@ public class MissingCaseListResponse {
     private String haircolrDscd;        // 머리색상
     private Integer tknphotolength;     // 사진크기
     private String fileUrl;             // 사진URL
+    private String etcSpfeatr;          // 신체특징
     private Double occurLat;            // 위도
     private Double occurLon;            // 경도
     private CaseStatus caseStatus;      // 케이스상태
