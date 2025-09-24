@@ -20,10 +20,23 @@ class EnhancedBedrockCase1:
         """최신 Bedrock 모델들을 활용한 케이스 1: CCTV → 특징 추출 → 몽타주 생성"""
         print("🚀 AWS Bedrock Enhanced 클라이언트 초기화 중...")
         
+        # EC2 IAM 역할로 Bedrock 클라이언트 초기화
         self.bedrock_runtime = boto3.client(
             service_name='bedrock-runtime',
             region_name=region_name
         )
+        
+        # 인증 확인
+        try:
+            sts = boto3.client('sts', region_name=region_name)
+            identity = sts.get_caller_identity()
+            arn = identity.get('Arn', '')
+            if ':assumed-role/' in arn:
+                print(f"✅ Bedrock 클라이언트 EC2 IAM 역할로 초기화: {arn.split('/')[-2]}")
+            else:
+                print(f"✅ Bedrock 클라이언트 초기화 완료")
+        except Exception as e:
+            print(f"⚠️ 인증 확인 실패, 계속 진행: {e}")
         
         # S3 매니저 초기화
         self.s3_manager = S3Manager(bucket_name, region_name)

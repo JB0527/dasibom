@@ -13,10 +13,28 @@ from datetime import datetime
 
 class S3Manager:
     def __init__(self, bucket_name: str = "dasibom-ai-results", region_name: str = 'us-east-1'):
-        """S3 매니저 초기화"""
+        """S3 매니저 초기화 (EC2 IAM 역할 자동 감지)"""
         self.bucket_name = bucket_name
         self.region_name = region_name
-        self.s3_client = boto3.client('s3', region_name=region_name)
+        
+        # IAM 역할 또는 기타 자격 증명 자동 감지
+        try:
+            self.s3_client = boto3.client('s3', region_name=region_name)
+            
+            # 인증 확인
+            sts = boto3.client('sts', region_name=region_name)
+            identity = sts.get_caller_identity()
+            arn = identity.get('Arn', '')
+            
+            if ':assumed-role/' in arn:
+                print(f"✅ S3 클라이언트 EC2 IAM 역할로 초기화: {arn.split('/')[-2]}")
+            else:
+                print(f"✅ S3 클라이언트 초기화 완료: {region_name}")
+                
+        except Exception as e:
+            print(f"❌ S3 클라이언트 초기화 실패: {e}")
+            print("💡 EC2 인스턴스에 적절한 IAM 역할이 연결되어 있는지 확인하세요.")
+            raise
         
     def download_image_from_source(self, image_source: str) -> bytes:
         """
