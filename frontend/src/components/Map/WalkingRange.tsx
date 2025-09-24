@@ -1,54 +1,54 @@
 // 도보 예측 범위 컴포넌트
 import React, { useEffect, useRef } from 'react';
 import { Map, Circle, CustomOverlayMap } from 'react-kakao-maps-sdk';
-import type { MissingPerson } from '../../types/missingPerson';
+import type { MissingPersonListItem } from '../../types/missingPerson';
 import { getDynamicWalkingDistance } from '../../utils/timeUtils';
 
 interface WalkingRangeMapProps {
-  person: MissingPerson;
+  person: MissingPersonListItem;
   className?: string;
 }
 
 const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "" }) => {
   const mapRef = useRef<kakao.maps.Map>(null);
   const [walkingDistance, setWalkingDistance] = React.useState(
-    getDynamicWalkingDistance(person.age, person.lastSeenDate)
+    getDynamicWalkingDistance(person.occurDate)
   );
   const [elapsedHours, setElapsedHours] = React.useState(
-    Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60))
+    Math.floor((new Date().getTime() - new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8)).getTime()) / (1000 * 60 * 60))
   );
   const [isUserInteracting, setIsUserInteracting] = React.useState(false);
   
   // 실시간으로 도보 범위와 경과 시간 업데이트 (1초마다)
   useEffect(() => {
     const interval = setInterval(() => {
-      setWalkingDistance(getDynamicWalkingDistance(person.age, person.lastSeenDate));
-      setElapsedHours(Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60)));
+      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+      setElapsedHours(Math.floor((new Date().getTime() - new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8)).getTime()) / (1000 * 60 * 60)));
     }, 1000); // 1초마다 업데이트
 
     return () => clearInterval(interval);
-  }, [person.age, person.lastSeenDate]);
+  }, [person.occurDate]);
 
   const radiusText = `${(walkingDistance / 1000).toFixed(1)}km`;
   const areaText = `${(Math.PI * walkingDistance * walkingDistance / 1000000).toFixed(1)}km²`;
 
   // 초기 지도 설정 (한 번만 실행)
   useEffect(() => {
-    if (mapRef.current && person.coordinates && !isUserInteracting) {
-      // 기존 지도에서 받은 실종 장소 좌표 사용
+    if (mapRef.current && person.point && !isUserInteracting) {
+      // 새로운 API의 point 좌표 사용
       const center = new window.kakao.maps.LatLng(
-        person.coordinates.lat, 
-        person.coordinates.lng
+        person.point.lat, 
+        person.point.lon
       );
       mapRef.current.setCenter(center);
       
-      // 도보 범위가 잘 보이도록 줌 레벨 조정 (나이 기반)
+      // 도보 범위가 잘 보이도록 줌 레벨 조정
       const zoomLevel = walkingDistance > 5000 ? 8 : 
                        walkingDistance > 3000 ? 9 : 
                        walkingDistance > 2000 ? 10 : 11;
       mapRef.current.setLevel(zoomLevel);
     }
-  }, [person.coordinates]); // walkingDistance 의존성 제거
+  }, [person.point]); // walkingDistance 의존성 제거
 
   // 사용자 상호작용 감지
   useEffect(() => {
@@ -84,7 +84,7 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
       {/* 미니 지도 */}
       <div className="h-48 w-full">
         <Map
-          center={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
+          center={{ lat: person.point.lat, lng: person.point.lon }}
           style={{ width: '100%', height: '100%' }}
           level={walkingDistance > 5000 ? 8 : 
                  walkingDistance > 3000 ? 9 : 
@@ -95,14 +95,14 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
         >
           {/* 실종자 마커 (실제 지도와 동일한 스타일) */}
           <CustomOverlayMap
-            position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
+            position={{ lat: person.point.lat, lng: person.point.lon }}
             yAnchor={1}
             xAnchor={0.5}
           >
             <div className="relative">
               {/* 프로필 이미지 */}
               <img
-                src={person.photo || `https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+                src={person.photoUrl || `https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
                 alt={person.name}
                 className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-lg"
               />
@@ -114,9 +114,9 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
             </div>
           </CustomOverlayMap>
           
-          {/* 도보 범위 원 (나이 기반) */}
+          {/* 도보 범위 원 */}
           <Circle
-            center={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
+            center={{ lat: person.point.lat, lng: person.point.lon }}
             radius={walkingDistance}
             strokeWeight={2}
             strokeColor="#3b82f6"

@@ -1,11 +1,12 @@
 // 신고 폼 컴포넌트
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useReport } from '../../hooks/useReport';
 import type { ReportFormData, CertaintyOption } from '../../types/report';
-import type { MissingPerson } from '../../types/missingPerson';
+import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
+import { useListMissingPerson } from '../../hooks/useListMissingPerson';
 
 interface ReportFormProps {
-  missingPerson: MissingPerson;
+  missingPerson: MissingPersonListItem | MissingPersonDetail;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -34,12 +35,17 @@ const certaintyOptions: CertaintyOption[] = [
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
   missingPerson, 
-  onSuccess, 
-  onCancel 
+  onSuccess
 }) => {
   const { submitReport, isSubmitting, error } = useReport();
+  const { getCaseDetail } = useListMissingPerson();
+  
+  // 상세 정보 상태
+  const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  
   const [formData, setFormData] = useState<Partial<ReportFormData>>({
-    missingPersonId: missingPerson.id,
+    missingPersonId: missingPerson.id.toString(),
     certainty: 'medium',
     sightingDate: new Date().toISOString().split('T')[0],
     sightingTime: new Date().toTimeString().slice(0, 5),
@@ -47,6 +53,22 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   const [photos, setPhotos] = useState<File[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // 컴포넌트 마운트 시 상세 정보 가져오기
+  useEffect(() => {
+    const loadDetailInfo = async () => {
+      setIsLoadingDetail(true);
+      try {
+        const detail = await getCaseDetail(missingPerson.id);
+        setDetailInfo(detail);
+      } catch (error) {
+        console.error('상세 정보 로드 실패:', error);
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    };
+    loadDetailInfo();
+  }, [missingPerson.id, getCaseDetail]);
 
   const handleInputChange = (field: keyof ReportFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -72,7 +94,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
 
     const reportData: ReportFormData = {
-      missingPersonId: missingPerson.id,
+      missingPersonId: missingPerson.id.toString(),
       reporterName: '익명', // 기본값
       reporterPhone: '000-0000-0000', // 기본값
       sightingDate: formData.sightingDate!,
@@ -104,9 +126,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         <h3 className="font-semibold text-gray-900 mb-2">신고 대상 실종자</h3>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0">
-            {missingPerson.photo ? (
+            {(detailInfo?.photoUrl || missingPerson.photoUrl) ? (
               <img 
-                src={missingPerson.photo} 
+                src={detailInfo?.photoUrl || missingPerson.photoUrl} 
                 alt={missingPerson.name}
                 className="w-full h-full object-cover rounded-lg"
               />
@@ -119,18 +141,32 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             )}
           </div>
           <div>
-            <p className="font-semibold">{missingPerson.name}</p>
-            <p className="text-sm text-gray-600">{missingPerson.age}세, {missingPerson.nationality}</p>
-            <p className="text-sm text-gray-600">실종일: {new Date(missingPerson.lastSeenDate).toLocaleString('ko-KR', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false
-            })}</p>
+            <p className="font-semibold">
+              {missingPerson.name}
+              {detailInfo && (
+                <span className="text-sm text-gray-500 font-normal ml-2">
+                  ({detailInfo.age || detailInfo.ageNow || 'N/A'}세, {detailInfo.sexCode === '1' ? '남성' : detailInfo.sexCode === '2' ? '여성' : 'N/A'})
+                </span>
+              )}
+            </p>
+            <p className="text-sm text-gray-600">상태: {missingPerson.status === 'OPEN' ? '진행중' : '해제'}</p>
+            <p className="text-sm text-gray-600">발생일: {missingPerson.occurDate.substring(0, 4)}-{missingPerson.occurDate.substring(4, 6)}-{missingPerson.occurDate.substring(6, 8)}</p>
+            <p className="text-sm text-gray-600">발생장소: {detailInfo?.occurAddress || 'N/A'}</p>
+            {detailInfo && (detailInfo.height || detailInfo.weight) && (
+              <p className="text-sm text-gray-600">
+                신체: {detailInfo.height ? `${detailInfo.height}cm` : ''}
+                {detailInfo.height && detailInfo.weight ? ', ' : ''}
+                {detailInfo.weight ? `${detailInfo.weight}kg` : ''}
+              </p>
+            )}
           </div>
         </div>
+        {isLoadingDetail && (
+          <div className="mt-2 flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+            <span className="text-xs text-gray-600">상세 정보를 불러오는 중...</span>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -276,3 +312,4 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     </div>
   );
 };
+

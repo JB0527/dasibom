@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
-import type { MissingPerson } from '../../types/missingPerson';
+import { calculateElapsedTime } from '../../utils/timeUtils';
+import type { MissingPersonListItem } from '../../types/missingPerson';
 
 interface MissingPersonMarkerProps {
-  person: MissingPerson;
+  person: MissingPersonListItem;
   onClick: () => void;
   isSelected?: boolean;
 }
@@ -13,19 +13,17 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
   onClick,
   isSelected = false
 }) => {
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.lastSeenDate));
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
   
   // 실시간 경과시간 업데이트 (1초마다)
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
+      setElapsedTime(calculateElapsedTime(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.lastSeenDate]);
+  }, [person.occurDate]);
 
-  // 나이와 실종 경과 시간을 고려한 동적 도보 거리 계산
-  const dynamicWalkingDistance = getDynamicWalkingDistance(person.age, person.lastSeenDate);
 
   // 기본 프로필 이미지
   const defaultPhoto = 'https://via.placeholder.com/60x60/4F46E5/FFFFFF?text=' + person.name.charAt(0);
@@ -41,7 +39,7 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
         {/* 프로필 이미지 */}
         <div className="relative">
           <img
-            src={person.photo || defaultPhoto}
+            src={person.photoUrl || defaultPhoto}
             alt={person.name}
             className={`w-12 h-12 rounded-full border-3 object-cover shadow-lg ${
               isSelected ? 'border-blue-500' : 'border-white'
