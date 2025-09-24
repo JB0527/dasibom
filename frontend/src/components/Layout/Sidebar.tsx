@@ -6,9 +6,10 @@ import ReportNumber from './ReportNumber';
 
 interface SidebarProps {
   onMenuClick?: (menu: string) => void;
+  currentPage?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onMenuClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, currentPage }) => {
   const [activeMenu, setActiveMenu] = useState('map');
 
   const handleMenuClick = (menu: string) => {
@@ -23,7 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick }) => {
         activeMenu={activeMenu} 
         onMenuClick={handleMenuClick} 
       />
-      <MissingStatusBoard />
+      {/* 지도 페이지에서만 MissingStatusBoard 표시 */}
+      {currentPage === 'map' && <MissingStatusBoard />}
       <ReportNumber />
     </div>
   );

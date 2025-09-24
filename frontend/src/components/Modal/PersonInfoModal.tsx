@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModalBase from './ModalBase';
 import WalkingRangeMap from '../Map/WalkingRange';
-import type { MissingPerson } from '../../types/missingPerson';
+import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
 import { calculateElapsedTime } from '../../utils/timeUtils';
+import { useMapMissingPerson } from '../../hooks/useMissingPerson';
 
 interface PersonInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  person: MissingPerson | null;
+  person: MissingPersonListItem | null;
   elapsedTime?: { formatted: string } | null; // 실제 지도에서 계산된 시간을 받음
 }
 
@@ -19,10 +20,15 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
   elapsedTime: propElapsedTime
 }) => {
   const navigate = useNavigate();
+  const { getCaseDetail } = useMapMissingPerson();
+  
+  // 상세 정보 상태
+  const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   
   // props로 받은 시간이 있으면 사용, 없으면 자체 계산
   const [elapsedTime, setElapsedTime] = useState(
-    propElapsedTime || calculateElapsedTime(person?.lastSeenDate || '')
+    propElapsedTime || calculateElapsedTime(person?.occurDate || '')
   );
   
   console.log('PersonInfoModal 렌더링:', { isOpen, person });
@@ -32,11 +38,11 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
     if (!person || propElapsedTime) return;
     
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
+      setElapsedTime(calculateElapsedTime(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person?.lastSeenDate, propElapsedTime]);
+  }, [person?.occurDate, propElapsedTime]);
 
   // props로 받은 시간이 변경되면 상태 업데이트
   useEffect(() => {
@@ -44,6 +50,24 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
       setElapsedTime(propElapsedTime);
     }
   }, [propElapsedTime]);
+
+  // 모달이 열릴 때 상세 정보 가져오기
+  useEffect(() => {
+    if (isOpen && person) {
+      const loadDetailInfo = async () => {
+        setIsLoadingDetail(true);
+        try {
+          const detail = await getCaseDetail(person.id);
+          setDetailInfo(detail);
+        } catch (error) {
+          console.error('상세 정보 로드 실패:', error);
+        } finally {
+          setIsLoadingDetail(false);
+        }
+      };
+      loadDetailInfo();
+    }
+  }, [isOpen, person, getCaseDetail]);
 
   const handleReport = () => {
     if (person) {
@@ -54,7 +78,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
   const handleShare = () => {
     if (!person) return;
     
-    const shareText = `${person.name} 실종자 정보\n나이: ${person.age}세\n실종일시: ${new Date(person.lastSeenDate).toLocaleString('ko-KR')}\n실종장소: ${person.lastSeenLocation}\n경과시간: ${elapsedTime.formatted}`;
+    const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n위치: ${person.point.lat.toFixed(4)}, ${person.point.lon.toFixed(4)}\n경과시간: ${elapsedTime.formatted}`;
     
     if (navigator.share) {
       navigator.share({
@@ -90,9 +114,9 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
         {/* 기본 정보 */}
         <div className="flex gap-4">
           <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0">
-            {person.photo ? (
+            {(detailInfo?.photoUrl || person.photoUrl) ? (
               <img 
-                src={person.photo} 
+                src={detailInfo?.photoUrl || person.photoUrl} 
                 alt={person.name}
                 className="w-full h-full object-cover rounded-lg"
               />
@@ -111,50 +135,83 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = ({
               <span className="font-semibold">{person.name}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-sm text-gray-500">상태</span>
+              <span>{person.status === 'OPEN' ? '진행중' : '해제'}</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-sm text-gray-500">나이</span>
-              <span>{person.age}세</span>
+              <span>{detailInfo?.age || detailInfo?.ageNow || 'N/A'}세</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">국적</span>
-              <span>{person.nationality}</span>
+              <span className="text-sm text-gray-500">성별</span>
+              <span>{detailInfo?.sexCode === '1' ? '남성' : detailInfo?.sexCode === '2' ? '여성' : 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">발생일시</span>
-              <span>{new Date(person.lastSeenDate).toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-              })}</span>
+              <span className="text-sm text-gray-500">발생일</span>
+              <span>{person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">발생장소</span>
-              <span className="text-right text-sm">{person.lastSeenLocation}</span>
+              <span className="text-right text-sm">{detailInfo?.occurAddress || 'N/A'}</span>
             </div>
           </div>
         </div>
 
-        {/* 추가 정보 (항상 표시) */}
-        <div className="space-y-2 pt-4 border-t">
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">키</span>
-            <span>{person.height}cm</span>
+        {/* 예측 정보 (있는 경우) */}
+        {person.prediction && (
+          <div className="space-y-2 pt-4 border-t">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">예측 시간</span>
+              <span>{new Date(person.prediction.predictedAt).toLocaleString('ko-KR')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">예측 범위</span>
+              <span>{person.prediction.horizonHours}시간</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">예상 속도</span>
+              <span>{person.prediction.speedKmh}km/h</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">현재 반경</span>
+              <span>{(person.prediction.currentRadiusM / 1000).toFixed(1)}km</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">몸무게</span>
-            <span>{person.weight}kg</span>
+        )}
+
+        {/* 추가 정보 (상세 정보가 있을 때만 표시) */}
+        {detailInfo && (
+          <div className="space-y-2 pt-4 border-t">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">키</span>
+              <span>{detailInfo.height ? `${detailInfo.height}cm` : 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">몸무게</span>
+              <span>{detailInfo.weight ? `${detailInfo.weight}kg` : 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">대상코드</span>
+              <span>{detailInfo.targetCode || 'N/A'}</span>
+            </div>
+            {detailInfo.endedAt && (
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">종료시각</span>
+                <span>{new Date(detailInfo.endedAt).toLocaleString('ko-KR')}</span>
+              </div>
+            )}
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">체격</span>
-            <span>{person.build}</span>
+        )}
+
+        {/* 로딩 상태 */}
+        {isLoadingDetail && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
+              <span className="text-sm text-gray-600">상세 정보를 불러오는 중...</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">얼굴형</span>
-            <span>{person.faceShape}</span>
-          </div>
-        </div>
+        )}
 
         {/* 도보 이동 범위 지도 */}
         <div className="pt-4 border-t">

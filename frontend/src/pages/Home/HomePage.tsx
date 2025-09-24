@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MapContainer from '../../components/Map/MapContainer';
 import Sidebar from '../../components/Layout/Sidebar';
 import MobileHeader from '../../components/Layout/MobileHeader';
@@ -10,7 +10,6 @@ import { ReportPage } from '../Report/ReportPage';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams();
   const [currentPage, setCurrentPage] = useState<'map' | 'missing-list' | 'report'>('map');
 
   const handleMenuClick = (menu: string) => {
@@ -77,7 +76,7 @@ const HomePage: React.FC = () => {
       
       {/* 데스크톱 사이드바 */}
       <div className="hidden md:block">
-        <Sidebar onMenuClick={handleMenuClick} />
+        <Sidebar onMenuClick={handleMenuClick} currentPage={currentPage} />
       </div>
       
       {/* 메인 콘텐츠 영역 */}

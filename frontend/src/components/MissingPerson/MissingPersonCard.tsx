@@ -1,32 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
-import type { MissingPerson } from '../../types/missingPerson';
+import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
+import { useListMissingPerson } from '../../hooks/useListMissingPerson';
 
 interface MissingPersonCardProps {
-  person: MissingPerson;
+  person: MissingPersonListItem;
 }
 
 const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.lastSeenDate));
+  const { getCaseDetail } = useListMissingPerson();
+  
+  // 상세 정보 상태
+  const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
+  
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
   const [walkingDistance, setWalkingDistance] = useState(
-    getDynamicWalkingDistance(person.age, person.lastSeenDate)
+    getDynamicWalkingDistance(person.occurDate)
   );
 
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
-      setWalkingDistance(getDynamicWalkingDistance(person.age, person.lastSeenDate));
+      setElapsedTime(calculateElapsedTime(person.occurDate));
+      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.lastSeenDate, person.age]);
+  }, [person.occurDate]);
+
+  // 컴포넌트 마운트 시 상세 정보 가져오기
+  useEffect(() => {
+    const loadDetailInfo = async () => {
+      try {
+        const detail = await getCaseDetail(person.id);
+        setDetailInfo(detail);
+      } catch (error) {
+        console.error('상세 정보 로드 실패:', error);
+      }
+    };
+    loadDetailInfo();
+  }, [person.id, getCaseDetail]);
 
   // 경과 시간에 따른 상태 표시
   const getStatusInfo = () => {
-    const hoursElapsed = (new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60);
+    const hoursElapsed = elapsedTime.hours;
     
     if (hoursElapsed <= 6) {
       return { label: '긴급', color: 'bg-red-100 text-red-800 border-red-200' };
@@ -46,7 +65,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
         {/* 왼쪽 프로필 사진 영역 */}
         <div className="relative flex-shrink-0 w-20 h-20 m-3">
           <img
-            src={person.photo || `https://via.placeholder.com/80x80/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+            src={person.photoUrl || `https://via.placeholder.com/80x80/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
             alt={person.name}
             className="w-full h-full object-cover rounded-lg"
           />
@@ -69,51 +88,56 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           <div>
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-gray-900">
-                {person.name} <span className="text-sm text-gray-500 font-normal">({person.age}세)</span>
+                {person.name}
+                {detailInfo && (
+                  <span className="text-sm text-gray-500 font-normal ml-2">
+                    ({detailInfo.age || detailInfo.ageNow || 'N/A'}세, {detailInfo.sexCode === '1' ? '남성' : detailInfo.sexCode === '2' ? '여성' : 'N/A'})
+                  </span>
+                )}
               </h3>
             </div>
             
             {/* 기본 정보 - 2열로 정리 */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
               <div>
-                <span className="text-gray-500">국적:</span>
-                <span className="ml-1 text-gray-900">{person.nationality}</span>
+                <span className="text-gray-500">상태:</span>
+                <span className="ml-1 text-gray-900">{person.status === 'OPEN' ? '진행중' : '해제'}</span>
               </div>
               <div>
-                <span className="text-gray-500">신체:</span>
-                <span className="ml-1 text-gray-900">{person.height}cm, {person.weight}kg</span>
-              </div>
-              <div>
-                <span className="text-gray-500">체형:</span>
-                <span className="ml-1 text-gray-900">{person.build}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">얼굴형:</span>
-                <span className="ml-1 text-gray-900">{person.faceShape}</span>
+                <span className="text-gray-500">대상코드:</span>
+                <span className="ml-1 text-gray-900">{detailInfo?.targetCode || person.targetCode || 'N/A'}</span>
               </div>
             </div>
             
             {/* 실종 정보 */}
             <div className="border-t pt-2 mb-3">
               <div className="text-sm mb-1">
-                <span className="text-gray-500">실종일시:</span>
+                <span className="text-gray-500">발생일:</span>
                 <span className="ml-1 text-gray-900">
-                  {new Date(person.lastSeenDate).toLocaleString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  })}
+                  {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
                 </span>
               </div>
               <div className="text-sm mb-1">
-                <span className="text-gray-500">실종장소:</span>
-                <span className="ml-1 text-gray-900">{person.lastSeenLocation}</span>
+                <span className="text-gray-500">발생장소:</span>
+                <span className="ml-1 text-gray-900">{detailInfo?.occurAddress || 'N/A'}</span>
               </div>
+              {detailInfo && (detailInfo.height || detailInfo.weight) && (
+                <div className="text-sm mb-1">
+                  <span className="text-gray-500">신체:</span>
+                  <span className="ml-1 text-gray-900">
+                    {detailInfo.height ? `${detailInfo.height}cm` : ''}
+                    {detailInfo.height && detailInfo.weight ? ', ' : ''}
+                    {detailInfo.weight ? `${detailInfo.weight}kg` : ''}
+                  </span>
+                </div>
+              )}
               <div className="text-sm">
                 <span className="text-gray-500">예상범위:</span>
                 <span className="ml-1 text-blue-600 font-semibold">{radiusText}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-500">위치:</span>
+                <span className="ml-1 text-gray-900">{person.point.lat.toFixed(4)}, {person.point.lon.toFixed(4)}</span>
               </div>
             </div>
           </div>
@@ -128,7 +152,9 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
             </button>
             <button
               onClick={() => {
-                const shareText = `${person.name} 실종자 정보\n나이: ${person.age}세\n실종일시: ${new Date(person.lastSeenDate).toLocaleString('ko-KR')}\n실종장소: ${person.lastSeenLocation}`;
+                const locationText = `위치: ${person.point.lat.toFixed(4)}, ${person.point.lon.toFixed(4)}`;
+                
+                const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n${locationText}`;
                 
                 if (navigator.share) {
                   navigator.share({
