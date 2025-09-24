@@ -4,7 +4,24 @@
 
 ## 🚀 Quick Start
 
-### Development Environment
+### 🔥 Local Development (권장)
+**DB, Redis만 도커로, 백엔드는 IDE에서 실행**
+
+```bash
+# 1. DB, Redis, 개발도구만 도커로 실행 (프로젝트 루트에서)
+docker compose -f docker-compose.local.yml up -d
+
+# 2. IDE에서 백엔드 실행
+# - IntelliJ: Application 실행 구성으로 App.java 실행
+# - VS Code: Spring Boot Dashboard 또는 터미널에서 ./gradlew bootRun
+# - Eclipse: Run As > Spring Boot App
+
+# 3. 개발 완료 후 정리
+docker compose -f docker-compose.local.yml down
+```
+
+### Full Development Environment
+**모든 것을 도커로 실행**
 ```bash
 # 프로젝트 루트에서 실행
 docker compose -f docker-compose.dev.yml up -d
@@ -67,6 +84,86 @@ curl -u user:e55b5b1d-3420-47d0-b45d-ba801953107f http://localhost:8080/
   - Email: admin@dasibom.com
   - Password: admin123
 - **MailHog**: http://localhost:8025 (이메일 테스트)
+
+## 💻 IDE 설정 (로컬 개발)
+
+### IntelliJ IDEA
+1. **프로젝트 열기**: `backend` 폴더를 루트로 열기
+2. **Java SDK 설정**: Project Structure > Project > SDK를 Java 21로 설정
+3. **Gradle 설정**: Gradle JVM을 Java 21로 설정
+4. **실행 구성**:
+   - Main class: `site.dasibom.App`
+   - VM options: `-Dspring.profiles.active=dev`
+   - Environment variables: 
+     ```
+     DB_HOST=localhost
+     DB_PORT=5432
+     DB_NAME=dasibom_dev
+     DB_USERNAME=dev_user
+     DB_PASSWORD=dev_password
+     REDIS_HOST=localhost
+     REDIS_PORT=6379
+     ```
+
+### VS Code
+1. **확장 프로그램 설치**:
+   - Extension Pack for Java
+   - Spring Boot Extension Pack
+2. **설정 파일** (`.vscode/launch.json`):
+   ```json
+   {
+     "type": "java",
+     "name": "Spring Boot-App",
+     "request": "launch",
+     "cwd": "${workspaceFolder}",
+     "mainClass": "site.dasibom.App",
+     "projectName": "dasibom",
+     "env": {
+       "SPRING_PROFILES_ACTIVE": "dev",
+       "DB_HOST": "localhost",
+       "DB_PORT": "5432",
+       "DB_NAME": "dasibom_dev",
+       "DB_USERNAME": "dev_user",
+       "DB_PASSWORD": "dev_password",
+       "REDIS_HOST": "localhost",
+       "REDIS_PORT": "6379"
+     }
+   }
+   ```
+
+### 터미널에서 실행
+```bash
+# 백엔드 디렉토리에서
+export SPRING_PROFILES_ACTIVE=dev
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=dasibom_dev
+export DB_USERNAME=dev_user
+export DB_PASSWORD=dev_password
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+
+./gradlew bootRun
+```
+
+### 🎯 로컬 개발 워크플로우
+```bash
+# 1. 도커로 DB, Redis만 실행
+docker compose -f docker-compose.local.yml up -d
+
+# 2. 서비스 확인
+docker ps  # database, redis, pgadmin, mailhog가 실행 중인지 확인
+
+# 3. IDE에서 백엔드 실행 (또는 ./gradlew bootRun)
+
+# 4. 개발 진행
+# - Hot reload 지원 (spring-boot-devtools)
+# - 디버그 모드로 브레이크포인트 설정 가능
+# - 실시간 코드 변경 반영
+
+# 5. 개발 완료 후
+docker compose -f docker-compose.local.yml down
+```
 
 ## 🔧 빌드 정보
 
@@ -153,6 +250,58 @@ REACT_APP_API_PASSWORD=e55b5b1d-3420-47d0-b45d-ba801953107f
 - **Spatial Data Types**: Point, Polygon 등 지원
 - **Spatial Functions**: 거리 계산, 위치 검색 등
 - **SRID**: 4326 (WGS84) 사용 권장
+
+## 🔗 외부 API 연동
+
+### Safe182 실종경보 API
+- **Base URL**: https://www.safe182.go.kr
+- **Endpoint**: `/api/lcm/amberList.do` (POST)
+- **기능**: 정부 공식 실종자 정보 조회 및 동기화
+
+#### 환경변수 설정 (.env 파일)
+```bash
+SAFE182_AUTH_KEY=your_auth_key_here
+SAFE182_ESNTL_ID=your_esntl_id_here
+SAFE182_SCHEDULER_ENABLED=true  # 스케줄러 활성화 (기본값: true)
+```
+
+#### API 엔드포인트
+```bash
+# Safe182 데이터 동기화
+POST /api/external/safe182/sync
+
+# 실종자 검색
+GET /api/external/safe182/search?name=홍길동&gender=1&ageFrom=10&ageTo=20
+
+# API 연결 테스트
+GET /api/external/safe182/test
+
+# 스케줄러 관리
+POST /api/scheduler/safe182/sync-now    # 수동 동기화 실행
+GET /api/scheduler/status               # 스케줄러 상태 조회
+GET /api/scheduler/config               # 스케줄러 설정 조회
+```
+
+#### 🕐 자동 스케줄러
+- **실행 간격**: 5분마다 자동 실행
+- **시작 시점**: 애플리케이션 시작 후 즉시 시작
+- **실행 방식**: `fixedRate = 300000ms` (정확히 5분마다)
+- **로그**: 실행 시작/완료 시 자동 로그 기록
+- **제어**: 환경변수로 활성화/비활성화 가능
+
+#### 사용 예시
+```javascript
+// 데이터 동기화
+const syncResponse = await fetch('/api/external/safe182/sync', {
+  method: 'POST',
+  headers: { 'Authorization': 'Basic ' + btoa('user:password') }
+});
+
+// 실종자 검색
+const searchResponse = await fetch('/api/external/safe182/search?name=홍길동', {
+  headers: { 'Authorization': 'Basic ' + btoa('user:password') }
+});
+```
 
 ## 🐛 디버깅
 
