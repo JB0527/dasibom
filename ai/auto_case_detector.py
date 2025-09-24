@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple
 from s3_utils import S3Manager
 
 class AutoCaseDetector:
-    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         self.s3_manager = S3Manager(bucket_name, region_name)
         self.bucket_name = bucket_name
         

@@ -16,7 +16,7 @@ from typing import Dict, Optional, Tuple, List
 from s3_utils import S3Manager, generate_case_id
 
 class BedrockSuperResolution:
-    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         """Bedrock 기반 Super Resolution 시스템"""
         print("🚀 AWS Bedrock Super Resolution 초기화 중...")
         
@@ -304,7 +304,11 @@ class BedrockSuperResolution:
             'case_type': 'super_resolution',
             's3_urls': {}
         }
-        
+
+        # 로컬 작업 디렉터리 준비 (일부 단계에서 중간 파일 저장 용도)
+        output_dir = os.path.join('/tmp', 'bedrock_super_resolution', case_id)
+        os.makedirs(output_dir, exist_ok=True)
+
         # 1. 원본 이미지 로드
         print("📸 STEP 1: 원본 이미지 로드")
         original_image_bytes = self.s3_manager.download_image_from_source(input_image_source)
@@ -417,7 +421,7 @@ def main():
     parser = argparse.ArgumentParser(description="AWS Bedrock Super Resolution")
     parser.add_argument("image_source", help="처리할 저화질 이미지 (S3 URL, HTTP URL, 또는 로컬 경로)")
     parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
-    parser.add_argument("--bucket", "-b", default="dasibom-ai-results", help="S3 버킷명")
+    parser.add_argument("--bucket", "-b", default="seoul-ht-06-dasibom", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전")
     
     args = parser.parse_args()

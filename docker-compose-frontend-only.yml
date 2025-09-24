@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dasibom-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-https.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+      - certbot_data:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  dasibom-network:
+    driver: bridge
+
+volumes:
+  certbot_data:
+  certbot_www:

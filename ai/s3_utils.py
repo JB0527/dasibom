@@ -8,11 +8,11 @@ import os
 import base64
 from io import BytesIO
 from PIL import Image
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from datetime import datetime
 
 class S3Manager:
-    def __init__(self, bucket_name: str = "dasibom-ai-results", region_name: str = 'us-east-1'):
+    def __init__(self, bucket_name: str = "seoul-ht-06-dasibom", region_name: str = 'us-east-1'):
         """S3 매니저 초기화 (EC2 IAM 역할 자동 감지)"""
         self.bucket_name = bucket_name
         self.region_name = region_name
@@ -163,6 +163,42 @@ class S3Manager:
         except Exception as e:
             print(f"S3 업로드 실패: {e}")
             raise
+
+    def list_images_in_prefix(self, prefix: str) -> List[str]:
+        """지정된 S3 prefix에서 이미지 파일 전체 목록을 반환"""
+        if prefix.startswith('s3://'):
+            s3_path = prefix.replace('s3://', '', 1)
+            if '/' in s3_path:
+                bucket, key_prefix = s3_path.split('/', 1)
+            else:
+                bucket, key_prefix = s3_path, ''
+        else:
+            bucket, key_prefix = self.bucket_name, prefix
+
+        if bucket != self.bucket_name:
+            print(f"⚠️ 다른 버킷 접근: {bucket} → IAM 권한을 확인하세요")
+
+        if key_prefix and not key_prefix.endswith('/'):
+            key_prefix = f"{key_prefix}/"
+
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+        image_urls: List[str] = []
+
+        try:
+            for page in paginator.paginate(Bucket=bucket, Prefix=key_prefix):
+                contents = page.get('Contents', [])
+                for obj in contents:
+                    key = obj['Key']
+                    if key.endswith('/'):
+                        continue
+                    lower_key = key.lower()
+                    if lower_key.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp')):
+                        image_urls.append(f"s3://{bucket}/{key}")
+            print(f"✅ Prefix '{prefix}'에서 {len(image_urls)}개 이미지 발견")
+            return image_urls
+        except Exception as e:
+            print(f"❌ Prefix 이미지 조회 실패: {e}")
+            return []
     
     def get_case_results(self, case_id: str, case_type: str = "general") -> dict:
         """케이스의 모든 결과 파일 목록 조회"""
