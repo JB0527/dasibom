@@ -34,22 +34,19 @@ class MissingPersonAIOrchestrator:
         print(f"🌍 AWS 리전: {region}")
         print("="*60)
     
-    def run_super_resolution(self, image_path: str) -> str:
+    def run_super_resolution(self, image_source: str, case_id: str) -> dict:
         """Super Resolution 실행"""
         print("\n🔍 Super Resolution 처리 시작")
         
-        sr_processor = BedrockSuperResolution(self.region)
-        sr_output = os.path.join(self.base_output, "super_resolution")
-        
-        results = sr_processor.process_super_resolution_pipeline(image_path, sr_output)
+        sr_processor = BedrockSuperResolution(self.region, self.bucket_name)
+        results = sr_processor.process_super_resolution_pipeline(image_source, case_id)
         
         if 'final' in results:
-            enhanced_path = os.path.join(sr_output, "09_final_result.png")
-            print(f"✅ Super Resolution 완료: {enhanced_path}")
-            return enhanced_path
+            print(f"✅ Super Resolution 완료: {results['s3_urls']['final']}")
+            return results
         else:
             print("⚠️ Super Resolution 실패, 원본 사용")
-            return image_path
+            return {'s3_urls': {'final': image_source}}
     
     def run_case1(self, image_path: str, use_sr: bool = True) -> dict:
         """케이스 1: CCTV 이미지만 있는 경우"""

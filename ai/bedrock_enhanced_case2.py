@@ -13,16 +13,33 @@ import io
 import cv2
 import numpy as np
 from typing import Dict, Optional, Tuple, List
+from s3_utils import S3Manager, generate_case_id
 
 class EnhancedBedrockCase2:
-    def __init__(self, region_name='us-east-1'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         """케이스 2: 구조화된 정보 + 얼굴 사진 → 전신 생성 + 얼굴 합성"""
         print("🚀 AWS Bedrock Enhanced Case 2 초기화 중...")
         
+        # EC2 IAM 역할로 Bedrock 클라이언트 초기화
         self.bedrock_runtime = boto3.client(
             service_name='bedrock-runtime',
             region_name=region_name
         )
+        
+        # 인증 확인
+        try:
+            sts = boto3.client('sts', region_name=region_name)
+            identity = sts.get_caller_identity()
+            arn = identity.get('Arn', '')
+            if ':assumed-role/' in arn:
+                print(f"✅ Bedrock 클라이언트 EC2 IAM 역할로 초기화: {arn.split('/')[-2]}")
+            else:
+                print(f"✅ Bedrock 클라이언트 초기화 완료")
+        except Exception as e:
+            print(f"⚠️ 인증 확인 실패, 계속 진행: {e}")
+        
+        # S3 매니저 초기화
+        self.s3_manager = S3Manager(bucket_name, region_name)
         
         self.models = {
             'claude': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
@@ -38,10 +55,9 @@ class EnhancedBedrockCase2:
         # OpenCV 얼굴 검출기
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
-    def encode_image(self, image_path: str) -> str:
-        """이미지를 base64로 인코딩"""
-        with open(image_path, "rb") as f:
-            return base64.b64encode(f.read()).decode('utf-8')
+    def encode_image(self, image_source: str) -> str:
+        """이미지를 base64로 인코딩 (S3, URL, 로컬 파일 지원)"""
+        return self.s3_manager.encode_image_from_source(image_source)
     
     def encode_pil_image(self, image: Image.Image) -> str:
         """PIL 이미지를 base64로 인코딩"""
@@ -312,13 +328,21 @@ class EnhancedBedrockCase2:
             print(f"⚠️ Nova 개선 실패: {e}")
             return image
     
-    def process_complete_pipeline(self, person_info_path: str, face_image_path: str, 
-                                 output_dir: str = "outputs") -> Dict:
+    def process_complete_pipeline(self, person_info_path: str, face_image_source: str, 
+                                 case_id: str = None) -> Dict:
         """전체 파이프라인 실행"""
-        os.makedirs(output_dir, exist_ok=True)
+        if not case_id:
+            case_id = generate_case_id()
+        
+        results = {
+            'case_id': case_id,
+            'case_type': 'case2_synthesis',
+            's3_urls': {}
+        }
         
         print("\n" + "="*60)
         print("🚀 ENHANCED CASE 2 PIPELINE 시작")
+        print(f"📋 케이스 ID: {case_id}")
         print("="*60 + "\n")
         
         # 1. 정보 로드
@@ -329,18 +353,19 @@ class EnhancedBedrockCase2:
         
         # 2. 얼굴 분석
         print("\n📋 STEP 2: 얼굴 특징 분석")
-        face_analysis = self.analyze_face_features(face_image_path)
+        face_analysis = self.analyze_face_features(face_image_source)
         
         if not face_analysis['success']:
-            print("❌ 얼굴 분석 실패")
-            return {}
+            print("❌얼굴 분석 실패")
+            return results
         
-        # 분석 결과 저장
-        analysis_path = os.path.join(output_dir, "01_face_analysis.txt")
-        with open(analysis_path, 'w', encoding='utf-8') as f:
-            f.write("=== 얼굴 특징 분석 ===\n\n")
-            f.write(face_analysis['description'])
-        print(f"💾 저장: {analysis_path}")
+        # 분석 결과를 S3에 저장
+        analysis_content = "=== 얼굴 특징 분석 ===\n\n" + face_analysis['description']
+        analysis_s3_url = self.s3_manager.upload_text_to_s3(
+            analysis_content, case_id, "01_face_analysis.txt", "case2_synthesis"
+        )
+        results['s3_urls']['face_analysis'] = analysis_s3_url
+        print(f"💾 S3 저장: {analysis_s3_url}")
         
         # 3. 전신 이미지 생성
         print("\n📋 STEP 3: 전신 이미지 생성")
@@ -351,9 +376,13 @@ class EnhancedBedrockCase2:
             return {}
         
         body_image = self.decode_image(body_base64)
-        body_path = os.path.join(output_dir, "02_generated_body.png")
-        body_image.save(body_path)
-        print(f"💾 저장: {body_path}")
+        
+        # S3에 저장
+        body_s3_url = self.s3_manager.upload_pil_image_to_s3(
+            body_image, case_id, "02_generated_body.png", "case2_synthesis"
+        )
+        results['s3_urls']['generated_body'] = body_s3_url
+        print(f"💾 S3 저장: {body_s3_url}")
         
         # 4. 얼굴 영역 검출
         print("\n📋 STEP 4: 얼굴 영역 검출")
@@ -364,41 +393,54 @@ class EnhancedBedrockCase2:
             
             # 5. 얼굴 합성
             print("\n📋 STEP 5: 얼굴 합성 (Inpainting)")
-            face_image = Image.open(face_image_path)
+            face_image_bytes = self.s3_manager.download_image_from_source(face_image_source)
+            face_image = Image.open(io.BytesIO(face_image_bytes))
             
             composite_image = self.inpaint_face_with_sdxl(body_image, face_image, face_region)
-            composite_path = os.path.join(output_dir, "03_face_composite.png")
-            composite_image.save(composite_path)
-            print(f"💾 저장: {composite_path}")
+            
+            # S3에 저장
+            composite_s3_url = self.s3_manager.upload_pil_image_to_s3(
+                composite_image, case_id, "03_face_composite.png", "case2_synthesis"
+            )
+            results['s3_urls']['face_composite'] = composite_s3_url
+            print(f"💾 S3 저장: {composite_s3_url}")
             
             # 6. 최종 개선
             print("\n📋 STEP 6: 최종 품질 개선")
             final_image = self.enhance_with_nova_variation(composite_image)
-            final_path = os.path.join(output_dir, "04_final_enhanced.png")
-            final_image.save(final_path)
-            print(f"💾 저장: {final_path}")
+            
+            # S3에 저장
+            final_s3_url = self.s3_manager.upload_pil_image_to_s3(
+                final_image, case_id, "04_final_enhanced.png", "case2_synthesis"
+            )
+            results['s3_urls']['final_enhanced'] = final_s3_url
+            print(f"💾 S3 저장: {final_s3_url}")
             
             # 7. 비교 이미지 생성
             print("\n📋 STEP 7: 비교 이미지 생성")
-            self.create_comparison_image(face_image, body_image, composite_image, 
-                                        final_image, output_dir)
+            comparison_s3_url = self.create_comparison_image(face_image, body_image, composite_image, 
+                                        final_image, case_id)
+            results['s3_urls']['comparison'] = comparison_s3_url
         else:
             print("⚠️ 얼굴 영역을 찾을 수 없어 직접 배치")
             final_image = body_image
         
         print("\n" + "="*60)
         print("✅ ENHANCED CASE 2 PIPELINE 완료!")
-        print(f"📁 모든 결과: {output_dir}")
+        print(f"📋 케이스 ID: {case_id}")
+        print(f"📁 모든 결과가 S3에 저장되었습니다")
         print("="*60 + "\n")
         
-        return {
+        results.update({
             'body': body_image,
             'final': final_image if 'final_image' in locals() else body_image,
             'face_analysis': face_analysis
-        }
+        })
+        
+        return results
     
     def create_comparison_image(self, face: Image.Image, body: Image.Image, 
-                                composite: Image.Image, final: Image.Image, output_dir: str):
+                                composite: Image.Image, final: Image.Image, case_id: str) -> str:
         """비교 이미지 생성"""
         # 모든 이미지를 동일 높이로 리사이즈
         height = 600
@@ -417,15 +459,19 @@ class EnhancedBedrockCase2:
             comparison.paste(img, (x, 0))
             x += img.width
         
-        comparison_path = os.path.join(output_dir, "05_comparison.png")
-        comparison.save(comparison_path)
-        print(f"💾 비교 이미지 저장: {comparison_path}")
+        # S3에 저장
+        comparison_s3_url = self.s3_manager.upload_pil_image_to_s3(
+            comparison, case_id, "05_comparison.png", "case2_synthesis"
+        )
+        print(f"💾 비교 이미지 S3 저장: {comparison_s3_url}")
+        return comparison_s3_url
 
 def main():
     parser = argparse.ArgumentParser(description="AWS Bedrock Enhanced - 케이스 2")
-    parser.add_argument("-i", "--info", required=True, help="인물 정보 JSON 파일")
-    parser.add_argument("-f", "--face", required=True, help="얼굴 참조 사진")
-    parser.add_argument("--output", "-o", default="outputs_case2", help="결과 저장 폴더")
+    parser.add_argument("-i", "--info", required=True, help="인물 정보 JSON 파일 (로컬 경로)")
+    parser.add_argument("-f", "--face", required=True, help="얼굴 참조 사진 (S3 URL, HTTP URL, 또는 로컬 경로)")
+    parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
+    parser.add_argument("--bucket", "-b", default="seoul-ht-06-dasibom", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전")
     
     args = parser.parse_args()
@@ -434,13 +480,15 @@ def main():
         print(f"❌ 정보 파일을 찾을 수 없습니다: {args.info}")
         return
     
-    if not os.path.exists(args.face):
-        print(f"❌ 얼굴 이미지를 찾을 수 없습니다: {args.face}")
-        return
-    
     # Enhanced 파이프라인 실행
-    processor = EnhancedBedrockCase2(region_name=args.region)
-    results = processor.process_complete_pipeline(args.info, args.face, args.output)
+    processor = EnhancedBedrockCase2(region_name=args.region, bucket_name=args.bucket)
+    results = processor.process_complete_pipeline(args.info, args.face, args.case_id)
+    
+    print(f"\n🎉 처리 완료!")
+    print(f"📋 케이스 ID: {results['case_id']}")
+    print(f"🔗 S3 결과 URL들:")
+    for key, url in results['s3_urls'].items():
+        print(f"  - {key}: {url}")
 
 if __name__ == "__main__":
     main()

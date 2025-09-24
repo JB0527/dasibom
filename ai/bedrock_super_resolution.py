@@ -13,16 +13,33 @@ import io
 import cv2
 import numpy as np
 from typing import Dict, Optional, Tuple, List
+from s3_utils import S3Manager, generate_case_id
 
 class BedrockSuperResolution:
-    def __init__(self, region_name='us-east-1'):
+    def __init__(self, region_name='us-east-1', bucket_name='seoul-ht-06-dasibom'):
         """Bedrock 기반 Super Resolution 시스템"""
         print("🚀 AWS Bedrock Super Resolution 초기화 중...")
         
+        # EC2 IAM 역할로 Bedrock 클라이언트 초기화
         self.bedrock_runtime = boto3.client(
             service_name='bedrock-runtime',
             region_name=region_name
         )
+        
+        # 인증 확인
+        try:
+            sts = boto3.client('sts', region_name=region_name)
+            identity = sts.get_caller_identity()
+            arn = identity.get('Arn', '')
+            if ':assumed-role/' in arn:
+                print(f"✅ Bedrock 클라이언트 EC2 IAM 역할로 초기화: {arn.split('/')[-2]}")
+            else:
+                print(f"✅ Bedrock 클라이언트 초기화 완료")
+        except Exception as e:
+            print(f"⚠️ 인증 확인 실패, 계속 진행: {e}")
+        
+        # S3 매니저 초기화
+        self.s3_manager = S3Manager(bucket_name, region_name)
         
         self.models = {
             'claude': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
@@ -35,10 +52,9 @@ class BedrockSuperResolution:
         print("✅ Super Resolution 모델: Nova Canvas, Titan v2, SDXL")
         print("초기화 완료!\n")
     
-    def encode_image(self, image_path: str) -> str:
-        """이미지를 base64로 인코딩"""
-        with open(image_path, "rb") as f:
-            return base64.b64encode(f.read()).decode('utf-8')
+    def encode_image(self, image_source: str) -> str:
+        """이미지를 base64로 인코딩 (S3, URL, 로컬 파일 지원)"""
+        return self.s3_manager.encode_image_from_source(image_source)
     
     def encode_pil_image(self, image: Image.Image) -> str:
         """PIL 이미지를 base64로 인코딩"""
@@ -272,32 +288,51 @@ class BedrockSuperResolution:
         comparison.save(output_path)
         print(f"💾 비교 그리드 저장: {output_path}")
     
-    def process_super_resolution_pipeline(self, input_image_path: str, 
-                                         output_dir: str = "outputs_sr") -> Dict:
+    def process_super_resolution_pipeline(self, input_image_source: str, 
+                                         case_id: str = None) -> Dict:
         """전체 Super Resolution 파이프라인"""
-        os.makedirs(output_dir, exist_ok=True)
+        if not case_id:
+            case_id = generate_case_id()
         
         print("\n" + "="*60)
         print("🚀 SUPER RESOLUTION PIPELINE 시작")
+        print(f"📋 케이스 ID: {case_id}")
         print("="*60 + "\n")
         
-        results = {}
-        
+        results = {
+            'case_id': case_id,
+            'case_type': 'super_resolution',
+            's3_urls': {}
+        }
+
+        # 로컬 작업 디렉터리 준비 (일부 단계에서 중간 파일 저장 용도)
+        output_dir = os.path.join('/tmp', 'bedrock_super_resolution', case_id)
+        os.makedirs(output_dir, exist_ok=True)
+
         # 1. 원본 이미지 로드
         print("📸 STEP 1: 원본 이미지 로드")
-        original_image = Image.open(input_image_path)
-        original_path = os.path.join(output_dir, "01_original.png")
-        original_image.save(original_path)
+        original_image_bytes = self.s3_manager.download_image_from_source(input_image_source)
+        original_image = Image.open(io.BytesIO(original_image_bytes))
+        
+        # S3에 저장
+        original_s3_url = self.s3_manager.upload_pil_image_to_s3(
+            original_image, case_id, "01_original.png", "super_resolution"
+        )
         results['original'] = original_image
-        print(f"💾 저장: {original_path}")
+        results['s3_urls']['original'] = original_s3_url
+        print(f"💾 S3 저장: {original_s3_url}")
         
         # 2. 전처리
         print("\n📸 STEP 2: 이미지 전처리")
         preprocessed = self.preprocess_image(original_image)
-        preprocessed_path = os.path.join(output_dir, "02_preprocessed.png")
-        preprocessed.save(preprocessed_path)
+        
+        # S3에 저장
+        preprocessed_s3_url = self.s3_manager.upload_pil_image_to_s3(
+            preprocessed, case_id, "02_preprocessed.png", "super_resolution"
+        )
         results['preprocessed'] = preprocessed
-        print(f"💾 저장: {preprocessed_path}")
+        results['s3_urls']['preprocessed'] = preprocessed_s3_url
+        print(f"💾 S3 저장: {preprocessed_s3_url}")
         
         # 3. 품질 분석
         print("\n📸 STEP 3: Claude 품질 분석")
@@ -365,35 +400,42 @@ class BedrockSuperResolution:
         
         # 9. 최종 선택
         final_image = results.get('sdxl', results.get('nova', results.get('titan', preprocessed)))
-        final_path = os.path.join(output_dir, "09_final_result.png")
-        final_image.save(final_path)
+        
+        # S3에 저장
+        final_s3_url = self.s3_manager.upload_pil_image_to_s3(
+            final_image, case_id, "09_final_result.png", "super_resolution"
+        )
         results['final'] = final_image
-        print(f"💾 최종 결과: {final_path}")
+        results['s3_urls']['final'] = final_s3_url
+        print(f"💾 최종 결과 S3 저장: {final_s3_url}")
         
         print("\n" + "="*60)
         print("✅ SUPER RESOLUTION PIPELINE 완료!")
-        print(f"📁 모든 결과: {output_dir}")
+        print(f"📋 케이스 ID: {case_id}")
+        print(f"📁 모든 결과가 S3에 저장되었습니다")
         print("="*60 + "\n")
         
         return results
 
 def main():
     parser = argparse.ArgumentParser(description="AWS Bedrock Super Resolution")
-    parser.add_argument("image_path", help="처리할 저화질 이미지 경로")
-    parser.add_argument("--output", "-o", default="outputs_super_resolution", help="결과 저장 폴더")
+    parser.add_argument("image_source", help="처리할 저화질 이미지 (S3 URL, HTTP URL, 또는 로컬 경로)")
+    parser.add_argument("--case-id", "-c", help="케이스 ID (미지정시 자동 생성)")
+    parser.add_argument("--bucket", "-b", default="seoul-ht-06-dasibom", help="S3 버킷명")
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS 리전")
     
     args = parser.parse_args()
     
-    if not os.path.exists(args.image_path):
-        print(f"❌ 이미지를 찾을 수 없습니다: {args.image_path}")
-        return
-    
     # Super Resolution 파이프라인 실행
-    processor = BedrockSuperResolution(region_name=args.region)
-    results = processor.process_super_resolution_pipeline(args.image_path, args.output)
+    processor = BedrockSuperResolution(region_name=args.region, bucket_name=args.bucket)
+    results = processor.process_super_resolution_pipeline(args.image_source, args.case_id)
     
-    print(f"\n🎉 처리 완료! 최고 품질 결과: {os.path.join(args.output, '09_final_result.png')}")
+    print(f"\n🎉 처리 완료!")
+    print(f"📋 케이스 ID: {results['case_id']}")
+    print(f"🏆 최종 결과: {results['s3_urls']['final']}")
+    print(f"🔗 S3 결과 URL들:")
+    for key, url in results['s3_urls'].items():
+        print(f"  - {key}: {url}")
 
 if __name__ == "__main__":
     main()
