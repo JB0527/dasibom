@@ -32,14 +32,25 @@ class AWSConfig:
         # 3. 환경 변수 사용
         
     def validate_credentials(self) -> bool:
-        """AWS 자격 증명 유효성 검사"""
+        """AWS 자격 증명 유효성 검사 (IAM 역할 우선)"""
         try:
+            # IAM 역할 또는 기타 자격 증명 자동 감지
             sts = boto3.client('sts', region_name=self.region_name)
             response = sts.get_caller_identity()
-            print(f"✅ AWS 인증 성공: {response.get('Arn', 'Unknown')}")
+            
+            # IAM 역할 사용 여부 확인
+            arn = response.get('Arn', '')
+            if ':assumed-role/' in arn:
+                print(f"✅ EC2 IAM 역할로 인증 성공: {arn}")
+            elif ':user/' in arn:
+                print(f"✅ IAM 사용자로 인증 성공: {arn}")
+            else:
+                print(f"✅ AWS 인증 성공: {arn}")
+            
             return True
         except (NoCredentialsError, ClientError) as e:
             print(f"❌ AWS 인증 실패: {e}")
+            print("💡 EC2에서 실행 중이라면 IAM 역할이 올바르게 연결되어 있는지 확인하세요.")
             return False
     
     def setup_bedrock_client(self) -> bool:
