@@ -60,6 +60,9 @@ public class MissingCase extends BaseEntity {
     
     @Column(columnDefinition = "TEXT")
     private String fileUrl; // 사진URL
+    
+    @Column(columnDefinition = "TEXT")
+    private String etcSpfeatr; // 신체특징
 
     // 좌표 (PostGIS 없이 일반 필드로)
     private Double occurLat; // 위도
