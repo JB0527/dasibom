@@ -125,8 +125,8 @@ public class Safe182Service {
         }
         missingCase.setFileUrl(person.getFileUrl());
         
-        // 신체특징 (MissingCase 엔티티에 해당 필드가 없어서 주석 처리)
-        // missingCase.setEtcSpfeatr(person.getEtcSpfeatr());
+        // 신체특징
+        missingCase.setEtcSpfeatr(person.getEtcSpfeatr());
         
         // 운영 메타 정보
         missingCase.setCaseStatus(CaseStatus.OPEN);
@@ -292,6 +292,9 @@ public class Safe182Service {
         
         // 사진 정보
         missingCase.setFileUrl(child.getFileUrl());
+        
+        // 신체특징
+        missingCase.setEtcSpfeatr(child.getEtcSpfeatr());
         
         // 운영 메타 정보
         missingCase.setCaseStatus(CaseStatus.OPEN);
