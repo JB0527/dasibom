@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import type { MissingPerson } from '../types/missingPerson';
+import type { MissingPersonListItem } from '../types/missingPerson';
 import { calculateElapsedTime } from '../utils/timeUtils';
 
-export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPerson[]) => {
-  const [selectedPerson, setSelectedPerson] = useState<MissingPerson | null>(null);
+export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPersonListItem[]) => {
+  const [selectedPerson, setSelectedPerson] = useState<MissingPersonListItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [selectedPersonElapsedTime, setSelectedPersonElapsedTime] = useState<{ formatted: string } | null>(null);
@@ -13,14 +13,14 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
     if (!selectedPerson) return;
     
     const interval = setInterval(() => {
-      setSelectedPersonElapsedTime(calculateElapsedTime(selectedPerson.lastSeenDate));
+      setSelectedPersonElapsedTime(calculateElapsedTime(selectedPerson.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
   }, [selectedPerson]);
 
   // 겹친 마커들을 찾는 함수
-  const findNearbyMarkers = (clickedPerson: MissingPerson) => {
+  const findNearbyMarkers = (clickedPerson: MissingPersonListItem) => {
     if (!mapInstance) return [];
     
     const currentLevel = mapInstance.getLevel();
@@ -31,15 +31,15 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
       if (person.id === clickedPerson.id) return false;
       
       // 두 마커 간의 거리 계산 (위도/경도 차이)
-      const latDiff = Math.abs(person.coordinates.lat - clickedPerson.coordinates.lat);
-      const lngDiff = Math.abs(person.coordinates.lng - clickedPerson.coordinates.lng);
+      const latDiff = Math.abs(person.point.lat - clickedPerson.point.lat);
+      const lngDiff = Math.abs(person.point.lon - clickedPerson.point.lon);
       const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
       
       return distance < threshold;
     });
   };
 
-  const handleMarkerClick = (person: MissingPerson) => {
+  const handleMarkerClick = (person: MissingPersonListItem) => {
     console.log('마커 클릭됨:', person);
     
     // 겹친 마커들 찾기
@@ -54,19 +54,19 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
       const newLevel = Math.max(1, currentLevel - 2); // 2단계 줌인
       
       mapInstance.setLevel(newLevel, {
-        anchor: new window.kakao.maps.LatLng(person.coordinates.lat, person.coordinates.lng)
+        anchor: new window.kakao.maps.LatLng(person.point.lat, person.point.lon)
       });
       
       // 줌인 후 잠시 대기 후 마커 선택
       setTimeout(() => {
         setSelectedPerson(person);
-        setSelectedMarkerId(person.id);
+        setSelectedMarkerId(person.id.toString());
         setIsModalOpen(true);
       }, 500);
     } else {
       // 겹친 마커가 없으면 바로 모달 표시
       setSelectedPerson(person);
-      setSelectedMarkerId(person.id);
+      setSelectedMarkerId(person.id.toString());
       setIsModalOpen(true);
     }
     
