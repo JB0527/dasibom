@@ -50,7 +50,7 @@ public class MissingCaseController {
     public ApiResponse<List<CaseResponse>> getForMap() {
         return ApiResponse.ok(service.list()); // 현재는 일반 목록과 동일, 추후 최적화 필요
     }
-    
+
     // 실종 사건 수정 - TODO: 권한 확인 필요
     @PatchMapping("/{id}")
     public ApiResponse<CaseResponse> update(@PathVariable Long id, @RequestBody @Valid CreateCaseRequest req) {
