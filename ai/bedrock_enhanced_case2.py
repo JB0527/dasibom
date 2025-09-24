@@ -13,9 +13,10 @@ import io
 import cv2
 import numpy as np
 from typing import Dict, Optional, Tuple, List
+from s3_utils import S3Manager, generate_case_id
 
 class EnhancedBedrockCase2:
-    def __init__(self, region_name='us-east-1'):
+    def __init__(self, region_name='us-east-1', bucket_name='dasibom-ai-results'):
         """케이스 2: 구조화된 정보 + 얼굴 사진 → 전신 생성 + 얼굴 합성"""
         print("🚀 AWS Bedrock Enhanced Case 2 초기화 중...")
         
@@ -23,6 +24,9 @@ class EnhancedBedrockCase2:
             service_name='bedrock-runtime',
             region_name=region_name
         )
+        
+        # S3 매니저 초기화
+        self.s3_manager = S3Manager(bucket_name, region_name)
         
         self.models = {
             'claude': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
@@ -38,10 +42,9 @@ class EnhancedBedrockCase2:
         # OpenCV 얼굴 검출기
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
-    def encode_image(self, image_path: str) -> str:
-        """이미지를 base64로 인코딩"""
-        with open(image_path, "rb") as f:
-            return base64.b64encode(f.read()).decode('utf-8')
+    def encode_image(self, image_source: str) -> str:
+        """이미지를 base64로 인코딩 (S3, URL, 로컬 파일 지원)"""
+        return self.s3_manager.encode_image_from_source(image_source)
     
     def encode_pil_image(self, image: Image.Image) -> str:
         """PIL 이미지를 base64로 인코딩"""
