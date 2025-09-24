@@ -8,12 +8,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import site.dasibom.domain.missingcase.dto.CaseResponse;
-import site.dasibom.domain.missingcase.dto.CreateCaseRequest;
 import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
 import site.dasibom.domain.missingcase.dto.MissingCaseSearchRequest;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
+import site.dasibom.domain.external.service.Safe182Service;
 import java.util.List;
 
 @Slf4j
@@ -22,29 +21,23 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class MissingCaseService {
     private final MissingCaseRepository repo;
+    private final Safe182Service safe182Service;
 
-    @Transactional
-    public CaseResponse create(CreateCaseRequest req) {
-        MissingCase mc = new MissingCase();
-        mc.setNm(req.name()); 
-        mc.setOccrAdres(req.address());
-        mc.setOccurLat(req.occurLat()); 
-        mc.setOccurLon(req.occurLon());
-        return CaseResponse.from(repo.save(mc));
-    }
-    
-    public CaseResponse get(Long id) { 
-        return CaseResponse.from(repo.findById(id).orElseThrow()); 
-    }
-    
-    public List<CaseResponse> list() { 
-        return repo.findAll().stream().map(CaseResponse::from).toList(); 
-    }
     
     /**
-     * 실종 사건 목록 조회 (페이지네이션, 필터링 지원)
+     * 실종 사건 목록 조회 (Safe182 API 호출 후 DB 저장)
      */
+    @Transactional
     public Page<MissingCaseListResponse> getMissingCases(MissingCaseSearchRequest request) {
+        
+        // Safe182 API 호출하여 최신 데이터 동기화
+        try {
+            log.info("Safe182 API에서 최신 실종자 데이터 동기화 시작");
+            safe182Service.syncMissingPersonsFromSafe182();
+            log.info("Safe182 API 데이터 동기화 완료");
+        } catch (Exception e) {
+            log.error("Safe182 API 동기화 실패, 기존 DB 데이터로 조회", e);
+        }
         
         // 정렬 설정
         Sort sort = createSort(request.getSortBy(), request.getSortDirection());
