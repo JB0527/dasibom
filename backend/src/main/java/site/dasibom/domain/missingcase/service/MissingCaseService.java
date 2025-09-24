@@ -1,10 +1,17 @@
 package site.dasibom.domain.missingcase.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.dasibom.domain.missingcase.dto.CaseResponse;
 import site.dasibom.domain.missingcase.dto.CreateCaseRequest;
+import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
+import site.dasibom.domain.missingcase.dto.MissingCaseSearchRequest;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
 import site.dasibom.domain.missingcase.controller.MissingCaseController.ContactRequest;
@@ -12,6 +19,7 @@ import site.dasibom.domain.missingcase.controller.MissingCaseController.Predicti
 import site.dasibom.domain.missingcase.controller.MissingCaseController.PredictionResponse;
 import java.util.List;
 
+@Slf4j
 @Service 
 @RequiredArgsConstructor 
 @Transactional(readOnly = true)
@@ -36,72 +44,97 @@ public class MissingCaseService {
         return repo.findAll().stream().map(CaseResponse::from).toList(); 
     }
     
-    // 실종 사건 수정 - TODO: 엔티티 필드별 수정 로직 구현 필요
-    @Transactional
-    public CaseResponse update(Long id, CreateCaseRequest req) {
-        MissingCase mc = repo.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("MissingCase not found"));
+    /**
+     * 실종 사건 목록 조회 (페이지네이션, 필터링 지원)
+     */
+    public Page<MissingCaseListResponse> getMissingCases(MissingCaseSearchRequest request) {
         
-        mc.setNm(req.name());
-        mc.setOccrAdres(req.address());
-        mc.setOccurLat(req.occurLat());
-        mc.setOccurLon(req.occurLon());
+        // 정렬 설정
+        Sort sort = createSort(request.getSortBy(), request.getSortDirection());
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
         
-        return CaseResponse.from(repo.save(mc));
+        // 데이터베이스에서 조회
+        Page<MissingCase> casePage = repo.findAll(pageable);
+        
+        // DTO로 변환
+        return casePage.map(this::convertToListResponse);
     }
     
-    // 실종 사건 삭제 - TODO: 관련 Report 엔티티 처리 고려 (CASCADE 설정 확인)
-    @Transactional
-    public void delete(Long id) {
-        MissingCase mc = repo.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("MissingCase not found"));
-        repo.delete(mc);
+    /**
+     * 실종 사건 상세 조회
+     */
+    public MissingCaseListResponse getMissingCaseDetail(Long id) {
+        MissingCase missingCase = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("실종 사건을 찾을 수 없습니다. ID: " + id));
+        
+        return convertToListResponse(missingCase);
     }
     
-    // 연락처 등록 - TODO: CaseContact 엔티티 구현 및 연동 필요
-    @Transactional
-    public void addContact(Long caseId, ContactRequest req) {
-        MissingCase mc = repo.findById(caseId)
-            .orElseThrow(() -> new IllegalArgumentException("MissingCase not found"));
-        
-        // TODO: CaseContact 엔티티 생성 및 저장
-        // CaseContact contact = new CaseContact();
-        // contact.setMissingCase(mc);
-        // contact.setName(req.name());
-        // contact.setPhone(req.phone());
-        // contact.setRelationship(req.relationship());
-        // caseContactRepository.save(contact);
-        
-        throw new UnsupportedOperationException("CaseContact 엔티티 구현 필요");
+    /**
+     * 전체 실종 사건 개수 조회
+     */
+    public long getTotalCount() {
+        return repo.count();
     }
     
-    // 이동 예측 조회 - TODO: AI 모델 연동 및 MovementPrediction 엔티티 조회
-    public PredictionResponse getPrediction(Long caseId) {
-        MissingCase mc = repo.findById(caseId)
-            .orElseThrow(() -> new IllegalArgumentException("MissingCase not found"));
+    /**
+     * 최근 실종 사건 목록 조회 (메인화면용)
+     */
+    public List<MissingCaseListResponse> getRecentMissingCases(int limit) {
+        Pageable pageable = PageRequest.of(0, limit, 
+                Sort.by(Sort.Direction.DESC, "createdAt"));
         
-        // TODO: MovementPrediction 엔티티에서 최신 예측 조회
-        // 또는 AI 모델 API 호출하여 실시간 예측 생성
-        
-        // 임시 더미 데이터 반환
-        return new PredictionResponse(37.5665, 126.9780, 0.75, "24hours");
+        return repo.findAll(pageable)
+                .getContent()
+                .stream()
+                .map(this::convertToListResponse)
+                .toList();
     }
     
-    // 예측 저장 - TODO: MovementPrediction 엔티티 구현 및 저장
-    @Transactional
-    public void savePrediction(Long caseId, PredictionRequest req) {
-        MissingCase mc = repo.findById(caseId)
-            .orElseThrow(() -> new IllegalArgumentException("MissingCase not found"));
+    /**
+     * MissingCase 엔티티를 MissingCaseListResponse DTO로 변환
+     */
+    private MissingCaseListResponse convertToListResponse(MissingCase missingCase) {
+        return MissingCaseListResponse.builder()
+                .id(missingCase.getId())
+                .occrde(missingCase.getOccrde())
+                .nm(missingCase.getNm())
+                .sexdstnDscd(missingCase.getSexdstnDscd())
+                .age(missingCase.getAge())
+                .ageNow(missingCase.getAgeNow())
+                .wrtngTrgetDscd(missingCase.getWrtngTrgetDscd())
+                .occrAdres(missingCase.getOccrAdres())
+                .alldressingDscd(missingCase.getAlldressingDscd())
+                .height(missingCase.getHeight())
+                .bdwgh(missingCase.getBdwgh())
+                .frmDscd(missingCase.getFrmDscd())
+                .faceshpeDscd(missingCase.getFaceshpeDscd())
+                .hairshpeDscd(missingCase.getHairshpeDscd())
+                .haircolrDscd(missingCase.getHaircolrDscd())
+                .tknphotolength(missingCase.getTknphotolength())
+                .fileUrl(missingCase.getFileUrl())
+                .occurLat(missingCase.getOccurLat())
+                .occurLon(missingCase.getOccurLon())
+                .caseStatus(missingCase.getCaseStatus())
+                .createdAt(missingCase.getCreatedAt())
+                .updatedAt(missingCase.getUpdatedAt())
+                .build();
+    }
+    
+    /**
+     * 정렬 조건 생성
+     */
+    private Sort createSort(String sortBy, String sortDirection) {
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection) 
+                ? Sort.Direction.ASC 
+                : Sort.Direction.DESC;
         
-        // TODO: MovementPrediction 엔티티 생성 및 저장
-        // MovementPrediction prediction = new MovementPrediction();
-        // prediction.setMissingCase(mc);
-        // prediction.setPredictedLat(req.lat());
-        // prediction.setPredictedLon(req.lon());
-        // prediction.setConfidence(req.confidence());
-        // prediction.setTimeframe(req.timeframe());
-        // movementPredictionRepository.save(prediction);
+        // 허용된 정렬 필드 검증
+        String validatedSortBy = switch (sortBy) {
+            case "occrde", "nm", "ageNow", "caseStatus", "updatedAt" -> sortBy;
+            default -> "createdAt"; // 기본값
+        };
         
-        throw new UnsupportedOperationException("MovementPrediction 엔티티 구현 필요");
+        return Sort.by(direction, validatedSortBy);
     }
 }
