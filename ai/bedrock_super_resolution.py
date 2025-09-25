@@ -45,11 +45,11 @@ class BedrockSuperResolution:
             'claude': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
             'nova_canvas': 'amazon.nova-canvas-v1:0',
             'titan_v2': 'amazon.titan-image-generator-v2:0',
-            'sdxl': 'stability.stable-diffusion-xl-v1-0'
+            'sdxl': 'stability.stable-diffusion-xl-v1'
         }
         
         print(f"✅ 리전: {region_name}")
-        print("✅ Super Resolution 모델: Nova Canvas, Titan v2, SDXL")
+        print("✅ Super Resolution 모델: Nova Canvas, Titan v2, Stable Diffusion XL")
         print("초기화 완료!\n")
     
     def encode_image(self, image_source: str) -> str:
@@ -217,32 +217,34 @@ class BedrockSuperResolution:
             return None
     
     def enhance_with_sdxl(self, image_base64: str) -> str:
-        """SDXL로 이미지 개선"""
-        print("✨ SDXL로 최종 개선 중...")
-        
+        """Stable Diffusion XL로 고품질 이미지 개선"""
+        print("✨ Stable Diffusion XL로 최종 개선 중...")
+
         try:
             request_body = {
                 "text_prompts": [
-                    {"text": "ultra high quality, sharp focus, clear details, professional photography", "weight": 1.0},
-                    {"text": "blurry, low quality, noise, artifacts, distorted", "weight": -1.0}
+                    {"text": "ultra high quality 4K resolution, crystal clear details, sharp focus, professional photography, enhanced clarity, noise reduction", "weight": 1.0},
+                    {"text": "blurry, low quality, noise, artifacts, distorted, pixelated, compressed", "weight": -1.0}
                 ],
                 "init_image": image_base64,
-                "image_strength": 0.3,
-                "cfg_scale": 7.0,
-                "steps": 30
+                "image_strength": 0.25,
+                "cfg_scale": 8.0,
+                "steps": 40,
+                "width": 1024,
+                "height": 1024
             }
-            
+
             response = self.bedrock_runtime.invoke_model(
                 modelId=self.models['sdxl'],
                 contentType="application/json",
                 accept="application/json",
                 body=json.dumps(request_body)
             )
-            
+
             response_body = json.loads(response['body'].read())
-            print("✅ SDXL 개선 완료!")
+            print("✅ SDXL 고품질 개선 완료!")
             return response_body['artifacts'][0]['base64']
-            
+
         except Exception as e:
             print(f"⚠️ SDXL 실패: {e}")
             return None

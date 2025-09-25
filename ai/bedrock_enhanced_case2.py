@@ -45,11 +45,11 @@ class EnhancedBedrockCase2:
             'claude': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
             'nova_canvas': 'amazon.nova-canvas-v1:0',
             'titan_v2': 'amazon.titan-image-generator-v2:0',
-            'sdxl': 'stability.stable-diffusion-xl-v1-0'
+            'sdxl': 'stability.stable-diffusion-xl-v1'
         }
         
         print(f"✅ 리전: {region_name}")
-        print("✅ 활성 모델: Nova Canvas, Titan v2, Claude 3.5, SDXL")
+        print("✅ 활성 모델: Nova Canvas, Titan v2, Claude 3.5, Stable Diffusion XL")
         print("초기화 완료!\n")
         
         # OpenCV 얼굴 검출기
@@ -250,49 +250,49 @@ class EnhancedBedrockCase2:
         
         return Image.fromarray(mask_np)
     
-    def inpaint_face_with_sdxl(self, body_image: Image.Image, face_image: Image.Image, 
+    def inpaint_face_with_sdxl(self, body_image: Image.Image, face_image: Image.Image,
                                face_region: Tuple[int, int, int, int]) -> Image.Image:
-        """SDXL Inpainting으로 얼굴 합성"""
-        print("🔄 SDXL Inpainting으로 얼굴 합성 중...")
-        
+        """Stable Diffusion XL Inpainting으로 고품질 얼굴 합성"""
+        print("🔄 Stable Diffusion XL Inpainting으로 얼굴 합성 중...")
+
         # 마스크 생성
         mask = self.create_face_mask(body_image, face_region)
-        
+
         # 얼굴 영역에 참조 얼굴 붙이기
         x, y, w, h = face_region
         face_resized = face_image.resize((w, h), Image.Resampling.LANCZOS)
-        
+
         body_with_face = body_image.copy()
         body_with_face.paste(face_resized, (x, y))
-        
+
         # Inpainting 요청
         try:
             request_body = {
                 "text_prompts": [
-                    {"text": "seamless face integration, natural lighting, photorealistic", "weight": 1.0},
-                    {"text": "artifacts, seams, unnatural", "weight": -1.0}
+                    {"text": "seamless face integration, natural lighting, photorealistic, high quality, sharp focus, detailed facial features", "weight": 1.0},
+                    {"text": "artifacts, seams, unnatural, blurry, low quality, distorted", "weight": -1.0}
                 ],
                 "init_image": self.encode_pil_image(body_with_face),
                 "mask_image": self.encode_pil_image(mask),
                 "mask_source": "MASK_IMAGE_WHITE",
-                "cfg_scale": 7.0,
-                "steps": 30,
-                "start_schedule": 0.6
+                "cfg_scale": 8.0,
+                "steps": 40,
+                "start_schedule": 0.5
             }
-            
+
             response = self.bedrock_runtime.invoke_model(
                 modelId=self.models['sdxl'],
                 contentType="application/json",
                 accept="application/json",
                 body=json.dumps(request_body)
             )
-            
+
             response_body = json.loads(response['body'].read())
             result_base64 = response_body['artifacts'][0]['base64']
-            
-            print("✅ 얼굴 합성 완료!")
+
+            print("✅ SDXL 얼굴 합성 완료!")
             return self.decode_image(result_base64)
-            
+
         except Exception as e:
             print(f"⚠️ Inpainting 실패, 직접 합성 사용: {e}")
             return body_with_face

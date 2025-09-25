@@ -49,7 +49,7 @@ class EnhancedBedrockCase1:
             'claude_fallback': os.getenv('CLAUDE_FALLBACK_MODEL_ID', 'anthropic.claude-3-sonnet-20240229-v1:0'),
             'nova_canvas': os.getenv('NOVA_CANVAS_MODEL_ID', 'amazon.nova-canvas-v1:0'),
             'titan_v2': os.getenv('TITAN_IMAGE_MODEL_ID', 'amazon.titan-image-generator-v2:0'),
-            'sdxl': os.getenv('SDXL_MODEL_ID', 'stability.stable-diffusion-xl-v1-0')
+            'sdxl': os.getenv('SDXL_MODEL_ID', 'stability.stable-diffusion-xl-v1')
         }
         
         print(f"✅ 리전: {region_name}")
@@ -367,34 +367,35 @@ class EnhancedBedrockCase1:
             return self.generate_montage_with_sdxl(analysis)
     
     def generate_montage_with_sdxl(self, analysis: str) -> str:
-        """SDXL로 몽타주 생성 (대체 옵션)"""
-        print("🎨 SDXL로 몽타주 생성 중...")
-        
-        prompt = f"police sketch portrait, {analysis[:500]}, realistic, detailed face"
-        
+        """SDXL로 몽타주 생성 (고품질 1024x1024)"""
+        print("🎨 Stable Diffusion XL로 몽타주 생성 중...")
+
+        prompt = f"professional police sketch portrait, detailed facial features based on: {analysis[:800]}, photorealistic, high quality, sharp focus, clear details, front facing view, neutral expression"
+
         try:
             request_body = {
                 "text_prompts": [
                     {"text": prompt, "weight": 1.0},
-                    {"text": "blurry, cartoon, anime", "weight": -1.0}
+                    {"text": "blurry, cartoon, anime, low quality, distorted, artifacts", "weight": -1.0}
                 ],
                 "cfg_scale": 8.0,
                 "steps": 50,
                 "seed": 42,
-                "width": 512,
-                "height": 512
+                "width": 1024,
+                "height": 1024
             }
-            
+
             response = self.bedrock_runtime.invoke_model(
                 modelId=self.models['sdxl'],
                 contentType="application/json",
                 accept="application/json",
                 body=json.dumps(request_body)
             )
-            
+
             response_body = json.loads(response['body'].read())
+            print("✅ SDXL 몽타주 생성 완료!")
             return response_body['artifacts'][0]['base64']
-            
+
         except Exception as e:
             print(f"❌ SDXL 생성 실패: {e}")
             return None
