@@ -2,21 +2,13 @@ package site.dasibom.domain.missingcase.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import site.dasibom.domain.missingcase.dto.CaseResponse;
-import site.dasibom.domain.missingcase.dto.CreateCaseRequest;
 import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
-import site.dasibom.domain.missingcase.dto.MissingCaseSearchRequest;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
-import site.dasibom.domain.missingcase.controller.MissingCaseController.ContactRequest;
-import site.dasibom.domain.missingcase.controller.MissingCaseController.PredictionRequest;
-import site.dasibom.domain.missingcase.controller.MissingCaseController.PredictionResponse;
+import site.dasibom.domain.external.service.Safe182Service;
+
 import java.util.List;
 
 @Slf4j
@@ -25,39 +17,31 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class MissingCaseService {
     private final MissingCaseRepository repo;
+    private final Safe182Service safe182Service;
 
-    @Transactional
-    public CaseResponse create(CreateCaseRequest req) {
-        MissingCase mc = new MissingCase();
-        mc.setNm(req.name()); 
-        mc.setOccrAdres(req.address());
-        mc.setOccurLat(req.occurLat()); 
-        mc.setOccurLon(req.occurLon());
-        return CaseResponse.from(repo.save(mc));
-    }
-    
-    public CaseResponse get(Long id) { 
-        return CaseResponse.from(repo.findById(id).orElseThrow()); 
-    }
-    
-    public List<CaseResponse> list() { 
-        return repo.findAll().stream().map(CaseResponse::from).toList(); 
-    }
     
     /**
-     * 실종 사건 목록 조회 (페이지네이션, 필터링 지원)
+     * 실종 사건 목록 조회 (Safe182 API 호출 후 DB 저장)
      */
-    public Page<MissingCaseListResponse> getMissingCases(MissingCaseSearchRequest request) {
+    @Transactional
+    public List<MissingCaseListResponse> getMissingCases() {
         
-        // 정렬 설정
-        Sort sort = createSort(request.getSortBy(), request.getSortDirection());
-        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
+        // Safe182 API 호출하여 최신 데이터 동기화
+        try {
+            log.info("Safe182 API에서 최신 실종자 데이터 동기화 시작");
+            safe182Service.syncMissingPersonsFromSafe182();
+            log.info("Safe182 API 데이터 동기화 완료");
+        } catch (Exception e) {
+            log.error("Safe182 API 동기화 실패, 기존 DB 데이터로 조회", e);
+        }
         
-        // 데이터베이스에서 조회
-        Page<MissingCase> casePage = repo.findAll(pageable);
+        // 데이터베이스에서 전체 조회
+        List<MissingCase> cases = repo.findAll();
         
         // DTO로 변환
-        return casePage.map(this::convertToListResponse);
+        return cases.stream()
+                .map(this::convertToListResponse)
+                .toList();
     }
     
     /**
@@ -75,20 +59,6 @@ public class MissingCaseService {
      */
     public long getTotalCount() {
         return repo.count();
-    }
-    
-    /**
-     * 최근 실종 사건 목록 조회 (메인화면용)
-     */
-    public List<MissingCaseListResponse> getRecentMissingCases(int limit) {
-        Pageable pageable = PageRequest.of(0, limit, 
-                Sort.by(Sort.Direction.DESC, "createdAt"));
-        
-        return repo.findAll(pageable)
-                .getContent()
-                .stream()
-                .map(this::convertToListResponse)
-                .toList();
     }
     
     /**
@@ -113,28 +83,18 @@ public class MissingCaseService {
                 .haircolrDscd(missingCase.getHaircolrDscd())
                 .tknphotolength(missingCase.getTknphotolength())
                 .fileUrl(missingCase.getFileUrl())
+                .msspsnIdntfccd(missingCase.getMsspsnIdntfccd())
+                .etcSpfeatr(missingCase.getEtcSpfeatr())
                 .occurLat(missingCase.getOccurLat())
                 .occurLon(missingCase.getOccurLon())
+                .geocodeProvider(missingCase.getGeocodeProvider())
+                .geocodedAt(missingCase.getGeocodedAt())
                 .caseStatus(missingCase.getCaseStatus())
+                .endedAt(missingCase.getEndedAt())
+                .lastCheckedAt(missingCase.getLastCheckedAt())
+                .sourceUpdatedAt(missingCase.getSourceUpdatedAt())
                 .createdAt(missingCase.getCreatedAt())
                 .updatedAt(missingCase.getUpdatedAt())
                 .build();
-    }
-    
-    /**
-     * 정렬 조건 생성
-     */
-    private Sort createSort(String sortBy, String sortDirection) {
-        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection) 
-                ? Sort.Direction.ASC 
-                : Sort.Direction.DESC;
-        
-        // 허용된 정렬 필드 검증
-        String validatedSortBy = switch (sortBy) {
-            case "occrde", "nm", "ageNow", "caseStatus", "updatedAt" -> sortBy;
-            default -> "createdAt"; // 기본값
-        };
-        
-        return Sort.by(direction, validatedSortBy);
     }
 }

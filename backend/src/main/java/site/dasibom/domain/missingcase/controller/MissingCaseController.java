@@ -1,12 +1,12 @@
 package site.dasibom.domain.missingcase.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import site.dasibom.global.common.ApiResponse;
 import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
-import site.dasibom.domain.missingcase.dto.MissingCaseSearchRequest;
 import site.dasibom.domain.missingcase.service.MissingCaseService;
+
+import java.util.List;
 
 @RestController 
 @RequestMapping("/api/cases") 
@@ -22,10 +22,9 @@ public class MissingCaseController {
     }
     
     @GetMapping 
-    public ApiResponse<Page<MissingCaseListResponse>> getMissingCases(
-            @ModelAttribute MissingCaseSearchRequest request) { 
+    public ApiResponse<List<MissingCaseListResponse>> getMissingCases() { 
         
-        Page<MissingCaseListResponse> result = service.getMissingCases(request);
+        List<MissingCaseListResponse> result = service.getMissingCases();
         return ApiResponse.ok(result);
     }
     
@@ -50,7 +49,7 @@ public class MissingCaseController {
     public ApiResponse<List<CaseResponse>> getForMap() {
         return ApiResponse.ok(service.list()); // 현재는 일반 목록과 동일, 추후 최적화 필요
     }
-    
+
     // 실종 사건 수정 - TODO: 권한 확인 필요
     @PatchMapping("/{id}")
     public ApiResponse<CaseResponse> update(@PathVariable Long id, @RequestBody @Valid CreateCaseRequest req) {

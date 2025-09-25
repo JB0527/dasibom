@@ -123,7 +123,16 @@ public class Safe182Service {
                 log.warn("사진크기 변환 실패: {}", person.getTknphotolength());
             }
         }
-        missingCase.setFileUrl(person.getFileUrl());
+        
+        // 실종자식별코드 저장
+        missingCase.setMsspsnIdntfccd(person.getMsspsnIdntfccd());
+        
+        // 사진 URL 생성 (사진이 있는 경우에만)
+        if (person.getTknphotolength() != null && !"0".equals(person.getTknphotolength()) 
+            && person.getMsspsnIdntfccd() != null) {
+            String photoUrl = "https://www.safe182.go.kr/api/lcm/imgView.do?msspsnIdntfccd=" + person.getMsspsnIdntfccd();
+            missingCase.setFileUrl(photoUrl);
+        }
         
         // 신체특징
         missingCase.setEtcSpfeatr(person.getEtcSpfeatr());
@@ -164,6 +173,7 @@ public class Safe182Service {
         existing.setAgeNow(newData.getAgeNow());
         existing.setFileUrl(newData.getFileUrl());
         existing.setTknphotolength(newData.getTknphotolength());
+        existing.setMsspsnIdntfccd(newData.getMsspsnIdntfccd()); // 실종자식별코드 업데이트 추가
         existing.setSourceUpdatedAt(LocalDateTime.now());
         existing.setLastCheckedAt(LocalDateTime.now());
         
