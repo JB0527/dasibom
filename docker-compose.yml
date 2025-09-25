@@ -115,7 +115,6 @@ services:
     networks:
       - dasibom-network
     restart: unless-stopped
->>>>>>> f21cd6c687a2912a95e314905c631668cb5f3a3a
 
 networks:
   dasibom-network:
