@@ -61,6 +61,8 @@ public class MissingCase extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String fileUrl; // 사진URL
     
+    private Long msspsnIdntfccd; // 실종자식별코드
+    
     @Column(columnDefinition = "TEXT")
     private String etcSpfeatr; // 신체특징
 

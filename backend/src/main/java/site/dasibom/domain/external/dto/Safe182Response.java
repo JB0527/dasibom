@@ -49,6 +49,8 @@ public class Safe182Response {
         @JsonProperty("tknphotolength")
         private String tknphotolength;      // 사진크기 (1234)
         private String fileUrl;             // 사진 URL
+        @JsonProperty("msspsnIdntfccd")
+        private Long msspsnIdntfccd;        // 실종자식별코드 (사진 URL 생성용)
         
         // 추가 정보
         private String etcSpfeatr;          // 신체특징
