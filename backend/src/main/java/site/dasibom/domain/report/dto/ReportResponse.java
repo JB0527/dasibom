@@ -2,6 +2,7 @@ package site.dasibom.domain.report.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import site.dasibom.domain.report.entity.Report;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 public record ReportResponse(

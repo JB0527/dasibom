@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.dasibom.domain.missingcase.dto.CaseResponse;
+import site.dasibom.domain.missingcase.dto.CreateCaseRequest;
 import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
