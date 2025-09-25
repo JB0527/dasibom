@@ -3,7 +3,6 @@ package site.dasibom.domain.report.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import site.dasibom.domain.common.enums.ReportCertainty;
-
 import java.time.LocalDateTime;
 
 public record CreateReportRequest(

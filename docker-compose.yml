@@ -100,21 +100,23 @@ services:
       - dasibom-network
     restart: unless-stopped
 
-  # Nginx Reverse Proxy (Commented out for testing)
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: dasibom-nginx
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx-http.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     backend:
-  #       condition: service_healthy
-  #   networks:
-  #     - dasibom-network
-  #   restart: unless-stopped
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dasibom-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+>>>>>>> f21cd6c687a2912a95e314905c631668cb5f3a3a
 
 networks:
   dasibom-network:

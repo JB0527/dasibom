@@ -34,13 +34,23 @@ public class Report extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ReportCertainty certainty = ReportCertainty.LIKELY; // 확신도
+    private ReportCertainty certainty = ReportCertainty.MEDIUM; // 확신도
     
     @Column(columnDefinition = "TEXT")
     private String description; // 제보내용
     
+    @Column(columnDefinition = "TEXT")
+    private String additionalInfo; // 추가 정보
+    
     @Column(length = 500)
     private String attachmentUrl; // 첨부파일URL
+
+    // 신고자 정보
+    @Column(nullable = false, length = 100)
+    private String reporterName; // 신고자 이름
+    
+    @Column(length = 100)
+    private String reporterEmail; // 신고자 이메일
 
     // 본인인증 메타
     @Enumerated(EnumType.STRING)
