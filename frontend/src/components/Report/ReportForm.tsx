@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useReport } from '../../hooks/useReport';
 import type { ReportFormData, CertaintyOption } from '../../types/report';
 import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
-import { useListMissingPerson } from '../../hooks/useListMissingPerson';
+import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 
 interface ReportFormProps {
   missingPerson: MissingPersonListItem | MissingPersonDetail;

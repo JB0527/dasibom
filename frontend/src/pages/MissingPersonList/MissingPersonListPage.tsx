@@ -1,33 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useListMissingPerson } from '../../hooks/useListMissingPerson';
+import React, { useState} from 'react';
+import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import { MissingPersonCard } from '../../components/MissingPerson/MissingPersonCard';
-import type { MissingPersonListItem } from '../../types/missingPerson';
 
 const MissingPersonListPage: React.FC = () => {
-  const { getCasesList } = useListMissingPerson();
-  const [missingPersons, setMissingPersons] = useState<MissingPersonListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { allPersons, isLoading } = useListMissingPerson();
   const [filter, setFilter] = useState<'all' | 'recent' | 'old'>('all');
-  useEffect(() => {
-    const loadMissingPersons = async () => {
-      try {
-        const response = await getCasesList();
-        setMissingPersons(response);
-      } catch (error) {
-        console.error('실종자 목록 로드 실패:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadMissingPersons();
-  }, [getCasesList]); // 이제 안전하게 추가 가능
 
 
   // 페이지네이션 제거됨 - 모든 데이터를 한 번에 로드
 
   // 필터링된 실종자 목록
-  const filteredMissingPersons = missingPersons.filter(person => {
+  const filteredMissingPersons = (allPersons || []).filter(person => {
     const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
     const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
     
@@ -71,7 +54,7 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                전체 ({missingPersons.length})
+                전체 ({(allPersons || []).length})
               </button>
               <button
                 onClick={() => setFilter('recent')}
@@ -81,7 +64,7 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                24h 이내 ({missingPersons.filter(person => {
+                24h 이내 ({(allPersons || []).filter(person => {
                   const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
                   const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
                   return hoursElapsed <= 24;
@@ -95,7 +78,7 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                24h 초과 ({missingPersons.filter(person => {
+                24h 초과 ({(allPersons || []).filter(person => {
                   const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
                   const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
                   return hoursElapsed > 24;

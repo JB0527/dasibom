@@ -10,7 +10,14 @@ import { ReportPage } from '../Report/ReportPage';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentPage, setCurrentPage] = useState<'map' | 'missing-list' | 'report'>('map');
+  // URL에 따라 초기 페이지 설정
+  const getInitialPage = () => {
+    if (location.pathname === '/missing-list') return 'missing-list';
+    if (location.pathname.startsWith('/report/')) return 'report';
+    return 'map';
+  };
+  
+  const [currentPage, setCurrentPage] = useState<'map' | 'missing-list' | 'report'>(getInitialPage());
 
   const handleMenuClick = (menu: string) => {
     switch (menu) {

@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // 30초로 증가
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,6 +37,12 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('authToken');
       window.location.href = '/login';
     }
+    
+    // 타임아웃 에러 로깅
+    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+      console.error('API 요청 타임아웃:', error.config?.url, error.message);
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTodayFormatted } from '../../utils/dateUtils';
 import { getMissingStatusData, type MissingStatusData } from '../../utils/missingPersonUtils';
-import { useMapMissingPerson } from '../../hooks/useMissingPerson';
+import { useStatusBoard } from '../../hooks/useOptimizedMissingPerson';
 
 interface MissingStatusBoardProps {
   date?: string;
@@ -9,6 +9,7 @@ interface MissingStatusBoardProps {
   resolvedCount?: number;
   reportCount?: number;
   isMobile?: boolean;
+  missingPersons?: any[]; // 외부에서 데이터를 전달받음
 }
 
 const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
@@ -18,17 +19,14 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
   reportCount,
   isMobile = false
 }) => {
-  const { missingPersons } = useMapMissingPerson();
+  const { missingPersons, isLoading, error } = useStatusBoard();
   const [statusData, setStatusData] = useState<MissingStatusData>({
     receivedCount: 0,
     resolvedCount: 0,
     reportCount: 0
   });
 
-  // MissingStatusBoard는 MapContainer에서 가져온 데이터를 사용
-  // 별도 API 호출하지 않음
-
-  // missingPersons이 변경되면 상태 데이터 업데이트
+  // 상태 데이터 계산
   useEffect(() => {
     if (missingPersons.length > 0) {
       const data = getMissingStatusData(missingPersons);

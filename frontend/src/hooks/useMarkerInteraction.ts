@@ -1,27 +1,30 @@
-import { useState, useEffect } from 'react';
-import type { MissingPersonListItem } from '../types/missingPerson';
-import { calculateElapsedTime } from '../utils/timeUtils';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { MissingPersonMapItem } from '../types/missingPerson';
+import { calculateElapsedTimeFromCreated } from '../utils/timeUtils';
 
-export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPersonListItem[]) => {
-  const [selectedPerson, setSelectedPerson] = useState<MissingPersonListItem | null>(null);
+export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPersonMapItem[]) => {
+  const [selectedPerson, setSelectedPerson] = useState<MissingPersonMapItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [selectedPersonElapsedTime, setSelectedPersonElapsedTime] = useState<{ formatted: string } | null>(null);
 
-  // 선택된 실종자의 경과시간을 실시간으로 업데이트
+  // 선택된 실종자의 경과시간을 실시간으로 업데이트 (5초마다로 변경)
   useEffect(() => {
     if (!selectedPerson) return;
     
+    // 즉시 한 번 계산
+    setSelectedPersonElapsedTime(calculateElapsedTimeFromCreated(selectedPerson.createdAt));
+    
     const interval = setInterval(() => {
-      setSelectedPersonElapsedTime(calculateElapsedTime(selectedPerson.occurDate));
-    }, 1000);
+      setSelectedPersonElapsedTime(calculateElapsedTimeFromCreated(selectedPerson.createdAt));
+    }, 5000); // 1초에서 5초로 변경
 
     return () => clearInterval(interval);
-  }, [selectedPerson]);
+  }, [selectedPerson?.createdAt]);
 
-  // 겹친 마커들을 찾는 함수
-  const findNearbyMarkers = (clickedPerson: MissingPersonListItem) => {
-    if (!mapInstance) return [];
+  // 겹친 마커들을 찾는 함수 (useCallback으로 안정화)
+  const findNearbyMarkers = useCallback((clickedPerson: MissingPersonMapItem) => {
+    if (!mapInstance || !window.kakao || !window.kakao.maps) return [];
     
     const currentLevel = mapInstance.getLevel();
     // 지도 레벨에 따른 거리 임계값 조정
@@ -29,6 +32,7 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
     
     return missingPersons.filter(person => {
       if (person.id === clickedPerson.id) return false;
+      if (!person.point || !clickedPerson.point) return false;
       
       // 두 마커 간의 거리 계산 (위도/경도 차이)
       const latDiff = Math.abs(person.point.lat - clickedPerson.point.lat);
@@ -37,55 +41,63 @@ export const useMarkerInteraction = (mapInstance: any, missingPersons: MissingPe
       
       return distance < threshold;
     });
-  };
+  }, [mapInstance, missingPersons]);
 
-  const handleMarkerClick = (person: MissingPersonListItem) => {
-    console.log('마커 클릭됨:', person);
-    
+  // 상태를 한 번에 업데이트하는 함수
+  const updateModalState = useCallback((person: MissingPersonMapItem) => {
+    setSelectedPerson(person);
+    setSelectedMarkerId(person.id.toString());
+    setIsModalOpen(true);
+  }, []);
+
+  const handleMarkerClick = useCallback((person: MissingPersonMapItem) => {
     // 겹친 마커들 찾기
     const nearbyMarkers = findNearbyMarkers(person);
     
     if (nearbyMarkers.length > 0 && mapInstance) {
       // 겹친 마커들이 있으면 자동 줌인
-      console.log('겹친 마커들 발견, 자동 줌인:', nearbyMarkers.length);
       
       // 클릭한 마커 위치로 중심 이동하면서 줌인
       const currentLevel = mapInstance.getLevel();
       const newLevel = Math.max(1, currentLevel - 2); // 2단계 줌인
       
-      mapInstance.setLevel(newLevel, {
-        anchor: new window.kakao.maps.LatLng(person.point.lat, person.point.lon)
-      });
+      if (person.point && window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
+        mapInstance.setLevel(newLevel, {
+          anchor: new window.kakao.maps.LatLng(person.point.lat, person.point.lon)
+        });
+      }
       
-      // 줌인 후 잠시 대기 후 마커 선택
+      // 줌인 후 잠시 대기 후 마커 선택 (상태를 한 번에 업데이트)
       setTimeout(() => {
-        setSelectedPerson(person);
-        setSelectedMarkerId(person.id.toString());
-        setIsModalOpen(true);
+        updateModalState(person);
       }, 500);
     } else {
       // 겹친 마커가 없으면 바로 모달 표시
-      setSelectedPerson(person);
-      setSelectedMarkerId(person.id.toString());
-      setIsModalOpen(true);
+      updateModalState(person);
     }
-    
-    console.log('모달 상태:', isModalOpen);
-  };
+  }, [findNearbyMarkers, mapInstance, updateModalState]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedPerson(null);
     setSelectedMarkerId(null);
     setSelectedPersonElapsedTime(null);
-  };
+  }, []);
 
-  return {
+  // 반환값을 useMemo로 메모이제이션
+  return useMemo(() => ({
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
     selectedPersonElapsedTime,
     handleMarkerClick,
     handleCloseModal
-  };
+  }), [
+    selectedPerson,
+    isModalOpen,
+    selectedMarkerId,
+    selectedPersonElapsedTime,
+    handleMarkerClick,
+    handleCloseModal
+  ]);
 };

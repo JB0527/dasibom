@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo, useCallback } from 'react';
 import { Map, CustomOverlayMap, MarkerClusterer, Circle } from 'react-kakao-maps-sdk';
 import PersonInfoModal from '../Modal/PersonInfoModal';
 import MissingPersonMarker from './MissingPersonMarker';
@@ -8,19 +8,15 @@ import { useMarkerInteraction } from '../../hooks/useMarkerInteraction';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { useZoomLevel } from '../../hooks/useZoomLevel';
 import { useClusterManager } from '../../hooks/useClusterManager';
-import { useMapMissingPerson } from '../../hooks/useMissingPerson';
+import { useMapMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import { getDynamicWalkingDistance } from '../../utils/timeUtils';
 import { ZOOM_LEVELS, CLUSTER_STYLES } from '../../constants/mapConstants';
 
-const MapContainer: React.FC = () => {
+const MapContainer: React.FC = memo(() => {
   // 실종자 데이터 가져오기
   const { missingPersons, isLoading, error, fetchMissingPersons } = useMapMissingPerson();
   
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    console.log('MapContainer: fetchMissingPersons 호출됨');
-    fetchMissingPersons();
-  }, []); // fetchMissingPersons 의존성 제거
+  // 컴포넌트 마운트 시 데이터 로드 (useOptimizedMissingPerson에서 이미 처리됨)
   
   // 커스텀 훅 사용
   const { isKakaoLoaded, isClusterLoaded, mapInstance, setMapInstance } = useKakaoMap();
@@ -44,14 +40,23 @@ const MapContainer: React.FC = () => {
     currentZoomLevel,
   });
 
-  // 사용자 위치가 변경되면 지도 중심을 이동
+  // 마커 클릭 핸들러를 useCallback으로 안정화
+  const handleMarkerClickCallback = useCallback((person: any) => {
+    handleMarkerClick(person);
+  }, [handleMarkerClick]);
+
+  // 사용자 위치가 변경되면 지도 중심을 이동 (한 번만 실행)
   useEffect(() => {
-    if (userLocation && mapInstance) {
-      const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
-      mapInstance.setCenter(moveLatLon);
-      mapInstance.setLevel(ZOOM_LEVELS.STREET_VIEW); // 거리 단위 뷰로 설정
+    if (userLocation && mapInstance && window.kakao && window.kakao.maps && window.kakao.maps.LatLng && typeof window.kakao.maps.LatLng === 'function') {
+      try {
+        const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lon);
+        mapInstance.setCenter(moveLatLon);
+        mapInstance.setLevel(ZOOM_LEVELS.STREET_VIEW); // 거리 단위 뷰로 설정
+      } catch (error) {
+        console.error('LatLng 생성 실패:', error);
+      }
     }
-  }, [userLocation, mapInstance]);
+  }, [userLocation?.lat, userLocation?.lon, mapInstance]); // 정확한 의존성만 사용
 
   // 로딩 상태
   if (!isKakaoLoaded || isLoading) {
@@ -60,7 +65,9 @@ const MapContainer: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">{isLoading ? '실종자 정보를 불러오는 중...' : '지도를 불러오는 중...'}</p>
-          <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
+          <p className="text-sm text-gray-400 mt-2">
+            {isLoading ? '주소를 좌표로 변환하고 있습니다' : '잠시만 기다려주세요'}
+          </p>
         </div>
       </div>
     );
@@ -100,13 +107,13 @@ const MapContainer: React.FC = () => {
         {/* 사용자 현재 위치 마커 */}
         {userLocation && (
           <CustomOverlayMap
-            position={{ lat: userLocation.lat, lng: userLocation.lng }}
+            position={{ lat: userLocation.lat, lng: userLocation.lon }}
             yAnchor={0.5}
             xAnchor={0.5}
           >
             <UserLocationMarker
               lat={userLocation.lat}
-              lng={userLocation.lng}
+              lon={userLocation.lon}
               accuracy={userLocation.accuracy}
             />
           </CustomOverlayMap>
@@ -122,18 +129,18 @@ const MapContainer: React.FC = () => {
             disableClickZoom={false}
             styles={CLUSTER_STYLES}
           >
-            {missingPersons.map((person) => (
+            {missingPersons.filter(person => person.point).map((person) => (
               <CustomOverlayMap
-                key={person.id}
-                position={{ lat: person.point.lat, lng: person.point.lon }}
+                key={`cluster-${person.id}`}
+                position={{ lat: person.point!.lat, lng: person.point!.lon }}
                 yAnchor={1}
                 xAnchor={0.5}
               >
                 <div
                   onClick={() => {
                     // 클러스터링된 마커 클릭 시 해당 위치로 줌인
-                    if (mapInstance) {
-                      const moveLatLon = new window.kakao.maps.LatLng(person.point.lat, person.point.lon);
+                    if (mapInstance && window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
+                      const moveLatLon = new window.kakao.maps.LatLng(person.point!.lat, person.point!.lon);
                       mapInstance.setCenter(moveLatLon);
                       mapInstance.setLevel(ZOOM_LEVELS.DETAIL_VIEW);
                     }
@@ -151,16 +158,16 @@ const MapContainer: React.FC = () => {
           </MarkerClusterer>
         ) : (
           // 개별 마커 모드: 커스텀 마커 사용
-          missingPersons.map((person) => (
+          missingPersons.filter(person => person.point).map((person) => (
             <CustomOverlayMap
-              key={person.id}
-              position={{ lat: person.point.lat, lng: person.point.lon }}
+              key={`marker-${person.id}`}
+              position={{ lat: person.point!.lat, lng: person.point!.lon }}
               yAnchor={1}
               xAnchor={0.5}
             >
               <MissingPersonMarker
                 person={person}
-                onClick={() => handleMarkerClick(person)}
+                onClick={() => handleMarkerClickCallback(person)}
                 isSelected={selectedMarkerId === person.id.toString()}
               />
             </CustomOverlayMap>
@@ -228,15 +235,18 @@ const MapContainer: React.FC = () => {
         )}
       </div>
 
-      {/* 실종자 정보 모달 */}
-      <PersonInfoModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        person={selectedPerson}
-        elapsedTime={selectedPersonElapsedTime}
-      />
+      {/* 실종자 정보 모달 - 열릴 때만 렌더링 */}
+      {isModalOpen && (
+        <PersonInfoModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          person={selectedPerson}
+        />
+      )}
     </div>
   );
-};
+});
+
+MapContainer.displayName = 'MapContainer';
 
 export default MapContainer;
