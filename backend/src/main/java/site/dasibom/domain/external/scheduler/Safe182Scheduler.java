@@ -31,15 +31,11 @@ public class Safe182Scheduler {
         try {
             log.info("=== Safe182 정기 동기화 시작 ===");
             
-            // 실종자 데이터 동기화
+            // 실종자 데이터 동기화 (amberList API만 사용)
             List<MissingCase> missingPersons = safe182Service.syncMissingPersonsFromSafe182();
             
-            // 실종아동 데이터 동기화
-            List<MissingCase> missingChildren = safe182Service.syncMissingChildrenFromSafe182();
-            
-            int totalProcessed = missingPersons.size() + missingChildren.size();
-            log.info("=== Safe182 정기 동기화 완료 - 실종자: {}건, 실종아동: {}건, 총: {}건 ===", 
-                    missingPersons.size(), missingChildren.size(), totalProcessed);
+            int totalProcessed = missingPersons.size();
+            log.info("=== Safe182 정기 동기화 완료 - 총: {}건 ===", totalProcessed);
             
         } catch (Exception e) {
             log.error("Safe182 정기 동기화 중 오류 발생", e);
