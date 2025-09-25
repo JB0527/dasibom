@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
-import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
-import { useListMissingPerson } from '../../hooks/useListMissingPerson';
+import { calculateElapsedTimeFromCreated, getDynamicWalkingDistance } from '../../utils/timeUtils';
+import type { MissingPersonListItem } from '../../types/missingPerson';
+import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface MissingPersonCardProps {
   person: MissingPersonListItem;
@@ -10,12 +10,8 @@ interface MissingPersonCardProps {
 
 const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
-  const { getCaseDetail } = useListMissingPerson();
   
-  // 상세 정보 상태
-  const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
-  
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTimeFromCreated(person.createdAt));
   const [walkingDistance, setWalkingDistance] = useState(
     getDynamicWalkingDistance(person.occurDate)
   );
@@ -23,25 +19,14 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.occurDate));
+      setElapsedTime(calculateElapsedTimeFromCreated(person.createdAt));
       setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.occurDate]);
+  }, [person.createdAt, person.occurDate]);
 
   // 컴포넌트 마운트 시 상세 정보 가져오기
-  useEffect(() => {
-    const loadDetailInfo = async () => {
-      try {
-        const detail = await getCaseDetail(person.id);
-        setDetailInfo(detail);
-      } catch (error) {
-        console.error('상세 정보 로드 실패:', error);
-      }
-    };
-    loadDetailInfo();
-  }, [person.id, getCaseDetail]);
 
   // 경과 시간에 따른 상태 표시
   const getStatusInfo = () => {
@@ -65,7 +50,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
         {/* 왼쪽 프로필 사진 영역 */}
         <div className="relative flex-shrink-0 w-20 h-20 m-3">
           <img
-            src={person.photoUrl || `https://via.placeholder.com/80x80/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+            src={person.photoUrl}
             alt={person.name}
             className="w-full h-full object-cover rounded-lg"
           />
@@ -76,9 +61,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           </div>
           {/* 경과시간 - 프로필 이미지 밑에 */}
           <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-            <span className="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs font-mono shadow-md">
-              {elapsedTime.formatted}
-            </span>
+            <ElapsedTimeBadge elapsedTime={elapsedTime} variant="compact" />
           </div>
         </div>
         
@@ -89,11 +72,9 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-gray-900">
                 {person.name}
-                {detailInfo && (
-                  <span className="text-sm text-gray-500 font-normal ml-2">
-                    ({detailInfo.age || detailInfo.ageNow || 'N/A'}세, {detailInfo.sexCode === '1' ? '남성' : detailInfo.sexCode === '2' ? '여성' : 'N/A'})
-                  </span>
-                )}
+                <span className="text-sm text-gray-500 font-normal ml-2">
+                  ({person.age || person.ageNow || 'N/A'}세, {person.sexCode === '1' ? '남성' : person.sexCode === '2' ? '여성' : 'N/A'})
+                </span>
               </h3>
             </div>
             
@@ -105,7 +86,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
               </div>
               <div>
                 <span className="text-gray-500">대상코드:</span>
-                <span className="ml-1 text-gray-900">{detailInfo?.targetCode || person.targetCode || 'N/A'}</span>
+                <span className="ml-1 text-gray-900">{person.targetCode || 'N/A'}</span>
               </div>
             </div>
             
@@ -119,25 +100,11 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
               </div>
               <div className="text-sm mb-1">
                 <span className="text-gray-500">발생장소:</span>
-                <span className="ml-1 text-gray-900">{detailInfo?.occurAddress || 'N/A'}</span>
+                <span className="ml-1 text-gray-900">{person.occurAddress || 'N/A'}</span>
               </div>
-              {detailInfo && (detailInfo.height || detailInfo.weight) && (
-                <div className="text-sm mb-1">
-                  <span className="text-gray-500">신체:</span>
-                  <span className="ml-1 text-gray-900">
-                    {detailInfo.height ? `${detailInfo.height}cm` : ''}
-                    {detailInfo.height && detailInfo.weight ? ', ' : ''}
-                    {detailInfo.weight ? `${detailInfo.weight}kg` : ''}
-                  </span>
-                </div>
-              )}
               <div className="text-sm">
                 <span className="text-gray-500">예상범위:</span>
                 <span className="ml-1 text-blue-600 font-semibold">{radiusText}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-500">위치:</span>
-                <span className="ml-1 text-gray-900">{person.point.lat.toFixed(4)}, {person.point.lon.toFixed(4)}</span>
               </div>
             </div>
           </div>
@@ -145,16 +112,16 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           {/* 하단 버튼 - 오른쪽 정렬 */}
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => navigate(`/report/${person.id}`)}
+              onClick={() => {
+                navigate(`/report/${person.id}`);
+              }}
               className="bg-blue-500 text-white py-1.5 px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
             >
               신고하기
             </button>
             <button
               onClick={() => {
-                const locationText = `위치: ${person.point.lat.toFixed(4)}, ${person.point.lon.toFixed(4)}`;
-                
-                const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n${locationText}`;
+                const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n발생장소: ${person.occurAddress || 'N/A'}`;
                 
                 if (navigator.share) {
                   navigator.share({

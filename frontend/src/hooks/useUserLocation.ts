@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 interface UserLocation {
   lat: number;
-  lng: number;
+  lon: number;
   accuracy?: number;
 }
 
@@ -32,11 +32,10 @@ export const useUserLocation = (): UseUserLocationReturn => {
         const { latitude, longitude, accuracy } = position.coords;
         setUserLocation({
           lat: latitude,
-          lng: longitude,
+          lon: longitude,
           accuracy: accuracy
         });
         setIsLoading(false);
-        console.log('사용자 위치:', { lat: latitude, lng: longitude, accuracy });
       },
       (error) => {
         let errorMessage = '위치를 가져올 수 없습니다.';

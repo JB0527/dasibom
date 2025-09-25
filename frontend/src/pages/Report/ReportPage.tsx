@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReportForm } from '../../components/Report/ReportForm';
-import { useListMissingPerson } from '../../hooks/useListMissingPerson';
+import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import type { MissingPersonDetail } from '../../types/missingPerson';
 
 interface ReportPageProps {
@@ -25,6 +25,8 @@ export const ReportPage: React.FC<ReportPageProps> = ({ missingPersonId }) => {
         } catch (error) {
           console.error('실종자 정보 로드 실패:', error);
         }
+      } else {
+        console.warn('missingPersonId가 없습니다');
       }
       setIsLoading(false);
     };
