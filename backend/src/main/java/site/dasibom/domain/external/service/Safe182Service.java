@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import site.dasibom.domain.external.client.Safe182ApiClient;
 import site.dasibom.domain.external.dto.Safe182Response;
 import site.dasibom.domain.external.dto.Safe182Request;
-import site.dasibom.domain.external.dto.Safe182FindChildRequest;
-import site.dasibom.domain.external.dto.Safe182FindChildResponse;
+// import site.dasibom.domain.external.dto.Safe182FindChildRequest;
+// import site.dasibom.domain.external.dto.Safe182FindChildResponse;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
 import site.dasibom.domain.common.enums.CaseStatus;
@@ -208,12 +208,14 @@ public class Safe182Service {
     }
     
     // ===============================
-    // Safe182 FindChildList API 관련 메소드들
+    // Safe182 FindChildList API 관련 메소드들 (사용 안함 - amberList만 사용)
     // ===============================
     
+    /*
     /**
      * Safe182 FindChildList API에서 실종아동 데이터를 가져와서 DB에 저장
      */
+    /*
     @Transactional
     public List<MissingCase> syncMissingChildrenFromSafe182() {
         try {
@@ -241,10 +243,13 @@ public class Safe182Service {
             throw new RuntimeException("Safe182 FindChildList 데이터 동기화 실패: " + e.getMessage(), e);
         }
     }
+    */
     
+    /*
     /**
      * Safe182 FindChild 응답 데이터를 MissingCase 엔티티로 변환
      */
+    /*
     private MissingCase convertFindChildToMissingCase(Safe182FindChildResponse.Safe182FindChild child) {
         MissingCase missingCase = new MissingCase();
         
@@ -313,10 +318,13 @@ public class Safe182Service {
         
         return missingCase;
     }
+    */
     
+    /*
     /**
      * 특정 조건으로 실종아동 검색
      */
+    /*
     public Safe182FindChildResponse searchMissingChildren(String name, String gender, Integer ageFrom, Integer ageTo) {
         return safe182ApiClient.searchMissingChildren(name, gender, ageFrom, ageTo);
     }
@@ -324,6 +332,7 @@ public class Safe182Service {
     /**
      * 고급 검색 - 모든 파라미터 지원 (FindChild)
      */
+    /*
     public Safe182FindChildResponse advancedSearchChildren(Safe182FindChildRequest request) {
         return safe182ApiClient.getFindChildList(request);
     }
@@ -331,7 +340,9 @@ public class Safe182Service {
     /**
      * 기본 실종아동 목록 조회
      */
+    /*
     public Safe182FindChildResponse getDefaultMissingChildrenList() {
         return safe182ApiClient.getFindChildListDefault();
     }
+    */
 }

@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import site.dasibom.domain.external.dto.Safe182Response;
-import site.dasibom.domain.external.dto.Safe182FindChildRequest;
-import site.dasibom.domain.external.dto.Safe182FindChildResponse;
+// import site.dasibom.domain.external.dto.Safe182FindChildRequest;
+// import site.dasibom.domain.external.dto.Safe182FindChildResponse;
 import site.dasibom.domain.external.service.Safe182Service;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 
@@ -131,12 +131,14 @@ public class Safe182Controller {
     }
     
     // ===============================
-    // Safe182 FindChildList API 관련 엔드포인트들
+    // Safe182 FindChildList API 관련 엔드포인트들 (사용 안함 - amberList만 사용)
     // ===============================
     
+    /*
     /**
      * Safe182 FindChildList API에서 실종아동 데이터 동기화
      */
+    /*
     @PostMapping("/children/sync")
     public ResponseEntity<?> syncMissingChildren() {
         try {
@@ -159,10 +161,13 @@ public class Safe182Controller {
             ));
         }
     }
+    */
     
+    /*
     /**
      * Safe182 FindChildList API로 실종아동 목록 조회 (기본값 사용)
      */
+    /*
     @GetMapping("/children")
     public ResponseEntity<?> getMissingChildrenList() {
         try {
@@ -187,10 +192,13 @@ public class Safe182Controller {
             ));
         }
     }
+    */
     
+    /*
     /**
      * Safe182 FindChildList API로 실종아동 검색
      */
+    /*
     @GetMapping("/children/search")
     public ResponseEntity<?> searchMissingChildren(
             @RequestParam(required = false) String name,
@@ -215,10 +223,13 @@ public class Safe182Controller {
             ));
         }
     }
+    */
     
+    /*
     /**
      * Safe182 FindChildList API 고급 검색
      */
+    /*
     @PostMapping("/children/advanced-search")
     public ResponseEntity<?> advancedSearchChildren(@RequestBody Safe182FindChildRequest request) {
         try {
@@ -238,10 +249,13 @@ public class Safe182Controller {
             ));
         }
     }
+    */
     
+    /*
     /**
      * Safe182 FindChildList API 연결 테스트
      */
+    /*
     @GetMapping("/children/test")
     public ResponseEntity<?> testChildrenApiConnection() {
         try {
@@ -265,4 +279,5 @@ public class Safe182Controller {
             ));
         }
     }
+    */
 }
