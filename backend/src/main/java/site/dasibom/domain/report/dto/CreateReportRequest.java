@@ -1,32 +1,21 @@
 package site.dasibom.domain.report.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
+import site.dasibom.domain.common.enums.ReportCertainty;
+import java.time.LocalDateTime;
 
 public record CreateReportRequest(
-    // 실종자 정보
     @NotNull Long caseId,
     
-    // 신고자 정보
-    @NotBlank String reporterName,
-    @NotBlank String reporterPhone,
-    String reporterEmail,
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    LocalDateTime reportedAt,
     
-    // 목격 정보
-    @NotBlank String sightingDate,
-    @NotBlank String sightingTime,
-    @NotBlank String sightingLocation,
-    @NotNull Double latitude,
-    @NotNull Double longitude,
+    @NotNull String location,
     
-    // 목격 상세 정보
-    @NotBlank String certainty, // 'high', 'medium', 'low'
-    @NotBlank String description,
-    String additionalInfo,
+    @NotNull ReportCertainty certainty,
     
-    // 첨부 파일 - TODO: S3 업로드 구현 필요
-    List<MultipartFile> photos,
-    List<MultipartFile> videos
+    String description,
+    
+    String attachmentUrl
 ) {}

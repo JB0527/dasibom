@@ -57,6 +57,22 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       APP_PORT: 8080
+      # Safe182 API Configuration
+      SAFE182_BASE_URL: ${SAFE182_BASE_URL:-https://www.safe182.go.kr}
+      SAFE182_AUTH_KEY: ${SAFE182_AUTH_KEY:-bca2e2d148a24ced}
+      SAFE182_ESNTL_ID: ${SAFE182_ESNTL_ID:-10000838}
+      SAFE182_SCHEDULER_ENABLED: ${SAFE182_SCHEDULER_ENABLED:-true}
+      SAFE182_SCHEDULER_FIXED_RATE: ${SAFE182_SCHEDULER_FIXED_RATE:-300000}
+      SAFE182_SCHEDULER_INITIAL_DELAY: ${SAFE182_SCHEDULER_INITIAL_DELAY:-60000}
+      # Security Configuration
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_here_change_in_production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # AWS Configuration
+      AWS_REGION: ${AWS_REGION:-us-west-1}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-seoul-ht-06-dasibom}
+      APP_URL: ${APP_URL:-https://ec2-54-193-170-230.us-west-1.compute.amazonaws.com}
       # JVM options for production
       JAVA_OPTS: >-
         -Xms512m
@@ -84,21 +100,23 @@ services:
       - dasibom-network
     restart: unless-stopped
 
-  # Nginx (Optional - uncomment if needed)
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: dasibom-nginx
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-  #     - ./nginx/ssl:/etc/nginx/ssl
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - dasibom-network
-  #   restart: unless-stopped
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dasibom-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+>>>>>>> f21cd6c687a2912a95e314905c631668cb5f3a3a
 
 networks:
   dasibom-network:

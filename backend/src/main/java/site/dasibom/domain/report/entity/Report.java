@@ -6,7 +6,6 @@ import site.dasibom.global.common.BaseEntity;
 import site.dasibom.domain.common.enums.ReportCertainty;
 import site.dasibom.domain.common.enums.ProviderType;
 import site.dasibom.domain.missingcase.entity.MissingCase;
-// import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
 
@@ -30,11 +29,8 @@ public class Report extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime sightedAt; // 목격시각
     
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String sightingAddress; // 목격장소주소
-    
-    private Double locationLat; // 목격위치 위도
-    private Double locationLon; // 목격위치 경도
+    @Column(length = 500)
+    private String location; // 목격위치 (JSON 문자열 등)
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

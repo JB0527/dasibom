@@ -150,7 +150,7 @@ public class Safe182ApiClient {
         return getAmberList(Safe182Request.builder()
             .esntlId(esntlId)
             .authKey(authKey)
-            .rowSize(10)
+            .rowSize(100)
             .page(1)
             .build());
     }
