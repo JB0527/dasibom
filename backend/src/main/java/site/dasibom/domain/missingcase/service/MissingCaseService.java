@@ -8,6 +8,7 @@ import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
 import site.dasibom.domain.external.service.Safe182Service;
+
 import java.util.List;
 
 @Slf4j

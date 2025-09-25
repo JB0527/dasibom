@@ -20,29 +20,8 @@ public class ReportController {
     private final ReportService service;
     
     @PostMapping 
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ReportResponse> createReport(
-            @RequestHeader("Authorization") String authorization,
-            @RequestBody @Valid CreateReportRequest request) {
-        
-        // TODO: JWT 토큰에서 전화번호 해시 추출 (임시로 하드코딩)
-        String verifiedPhoneHash = extractPhoneHashFromToken(authorization);
-        
-        // reportedAt이 null인 경우 현재 시각으로 설정
-        CreateReportRequest processedRequest = request;
-        if (request.reportedAt() == null) {
-            processedRequest = new CreateReportRequest(
-                request.caseId(),
-                LocalDateTime.now(),
-                request.location(),
-                request.certainty(),
-                request.description(),
-                request.attachmentUrl()
-            );
-        }
-        
-        ReportResponse response = service.create(processedRequest, verifiedPhoneHash);
-        return ApiResponse.ok(response);
+    public ApiResponse<ReportResponse> create(@RequestBody @Valid CreateReportRequest req) { 
+        return ApiResponse.ok(service.create(req)); 
     }
     
     @GetMapping("/{reportId}") 
