@@ -24,7 +24,7 @@ const MapContainer: React.FC = memo(() => {
     selectedPerson,
     isModalOpen,
     selectedMarkerId,
-    selectedPersonElapsedTime,
+    //selectedPersonElapsedTime,
     handleMarkerClick,
     handleCloseModal
   } = useMarkerInteraction(mapInstance, missingPersons);

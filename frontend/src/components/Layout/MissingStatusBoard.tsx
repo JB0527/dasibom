@@ -19,7 +19,7 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
   reportCount,
   isMobile = false
 }) => {
-  const { missingPersons, isLoading, error } = useStatusBoard();
+  const { missingPersons } = useStatusBoard();
   const [statusData, setStatusData] = useState<MissingStatusData>({
     receivedCount: 0,
     resolvedCount: 0,

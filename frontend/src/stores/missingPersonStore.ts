@@ -148,8 +148,8 @@ export const useMissingPersonStore = create<MissingPersonState>()(
               }));
             
             // 성공/실패 통계
-            const successCount = geocodingResults.filter(({ coords }) => coords.success).length;
-            const failCount = geocodingResults.length - successCount;
+            // const successCount = geocodingResults.filter(({ coords }) => coords.success).length;
+            // const failCount = geocodingResults.length - successCount;
             
             set({ 
               mapPersons: mapItems,
