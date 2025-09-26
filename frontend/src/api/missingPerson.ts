@@ -2,7 +2,7 @@
 import { apiClient } from './client';
 import type { MissingPersonDetail, MissingPersonListItem, ApiMissingPerson } from '../types/missingPerson';
 
-// API 응답을 MissingPersonListItem으로 변환 (목록용)
+// API 응답을 MissingPersonListItem으로 변환 (상세 정보 포함)
 const convertApiResponse = (apiPerson: ApiMissingPerson): MissingPersonListItem => {
   return {
     id: apiPerson.id,
@@ -15,7 +15,18 @@ const convertApiResponse = (apiPerson: ApiMissingPerson): MissingPersonListItem 
     ageNow: apiPerson.ageNow,
     targetCode: apiPerson.wrtngTrgetDscd,
     photoUrl: apiPerson.fileUrl || `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg width="80" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" fill="#4F46E5"/><text x="40" y="45" text-anchor="middle" fill="white" font-family="Arial" font-size="32" font-weight="bold">${apiPerson.nm.charAt(0)}</text></svg>`)}`, // 실제 사진 URL 또는 기본사진 생성
-    createdAt: apiPerson.createdAt // 데이터 생성 시간 추가
+    createdAt: apiPerson.createdAt, // 데이터 생성 시간 추가
+    
+    // 상세 정보 포함
+    height: apiPerson.height,
+    weight: apiPerson.bdwgh,
+    alldressingDscd: apiPerson.alldressingDscd,
+    frmDscd: apiPerson.frmDscd,
+    faceshpeDscd: apiPerson.faceshpeDscd,
+    hairshpeDscd: apiPerson.hairshpeDscd,
+    haircolrDscd: apiPerson.haircolrDscd,
+    tknphotolength: apiPerson.tknphotolength,
+    updatedAt: apiPerson.updatedAt
   };
 };
 

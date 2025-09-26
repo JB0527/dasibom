@@ -4,6 +4,7 @@ import ModalBase from './ModalBase';
 import WalkingRangeMap from '../Map/WalkingRange';
 import type { MissingPersonDetail, MissingPersonMapItem } from '../../types/missingPerson';
 import { calculateElapsedTimeFromCreated } from '../../utils/timeUtils';
+import { getTargetCodeLabel } from '../../utils/targetCodeUtils';
 import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
@@ -166,7 +167,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">대상타입</span>
-                  <span className="font-medium">{detailInfo?.targetCode || 'N/A'}</span>
+                  <span className="font-medium">{getTargetCodeLabel(detailInfo?.targetCode)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">사건상태</span>

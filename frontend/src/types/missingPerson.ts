@@ -56,7 +56,7 @@ export interface ApiMissingPerson {
   updatedAt: string;
 }
 
-// 목록용 간단한 정보 (통합 API용 - 지도/목록 모두 사용)
+// 목록용 정보 (상세 정보 포함)
 export interface MissingPersonListItem {
   id: number;
   status: 'OPEN' | 'CLOSED';
@@ -69,7 +69,17 @@ export interface MissingPersonListItem {
   targetCode: string;
   photoUrl: string; // 기본사진 URL
   createdAt: string; // 데이터 생성 시간 (경과시간 계산용)
-  // 지도용 데이터는 별도 인터페이스로 분리
+  
+  // 상세 정보 (API에서 제공하는 모든 필드)
+  height?: number; // 키
+  weight?: number; // 체중
+  alldressingDscd?: string; // 복장
+  frmDscd?: string; // 체형
+  faceshpeDscd?: string; // 얼굴형
+  hairshpeDscd?: string; // 머리형
+  haircolrDscd?: string; // 머리색
+  tknphotolength?: number; // 사진길이
+  updatedAt?: string; // 업데이트 시간
 }
 
 // 지도용 확장 정보 (지도에서만 사용)
