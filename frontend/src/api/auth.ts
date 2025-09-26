@@ -42,6 +42,7 @@ export const authApi = {
   // 토큰 갱신
   refreshToken: async (): Promise<{ token: string }> => {
     const response = await apiClient.post('/auth/refresh');
+
     return response.data;
   },
 };
