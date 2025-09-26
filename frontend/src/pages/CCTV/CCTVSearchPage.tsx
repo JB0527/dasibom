@@ -63,7 +63,7 @@ const CCTVSearchPage: React.FC = memo(() => {
       id: 1, 
       lat: selectedPerson.point.lat + 0.005, 
       lng: selectedPerson.point.lon + 0.005, 
-      imageUrl: '/src/assets/cctv1.png',
+      imageUrl: '/assets/cctv1.png',
       timestamp: '2024-01-15 14:30:25',
       location: '서울시 강남구 테헤란로 123',
       accuracy: 87
@@ -72,7 +72,7 @@ const CCTVSearchPage: React.FC = memo(() => {
       id: 2, 
       lat: selectedPerson.point.lat - 0.005, 
       lng: selectedPerson.point.lon + 0.005, 
-      imageUrl: '/src/assets/cctv2.png',
+      imageUrl: '/assets/cctv2.png',
       timestamp: '2024-01-15 14:32:10',
       location: '서울시 강남구 테헤란로 125',
       accuracy: 92
@@ -81,7 +81,7 @@ const CCTVSearchPage: React.FC = memo(() => {
       id: 3, 
       lat: selectedPerson.point.lat + 0.005, 
       lng: selectedPerson.point.lon - 0.005, 
-      imageUrl: '/src/assets/cctv1.png',
+      imageUrl: '/assets/cctv1.png',
       timestamp: '2024-01-15 14:35:45',
       location: '서울시 강남구 테헤란로 127',
       accuracy: 78
@@ -90,7 +90,7 @@ const CCTVSearchPage: React.FC = memo(() => {
       id: 4, 
       lat: selectedPerson.point.lat - 0.005, 
       lng: selectedPerson.point.lon - 0.005, 
-      imageUrl: '/src/assets/cctv2.png',
+      imageUrl: '/assets/cctv2.png',
       timestamp: '2024-01-15 14:38:20',
       location: '서울시 강남구 테헤란로 129',
       accuracy: 95
