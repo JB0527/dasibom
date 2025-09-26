@@ -2,19 +2,27 @@
 import React, { useEffect, useRef } from 'react';
 import { Map, Circle, CustomOverlayMap } from 'react-kakao-maps-sdk';
 import type { MissingPersonMapItem } from '../../types/missingPerson';
-import { getDynamicWalkingDistance } from '../../utils/timeUtils';
+import { getDynamicWalkingDistance, getWalkingDistanceBySpeed } from '../../utils/timeUtils';
 import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface WalkingRangeMapProps {
   person: MissingPersonMapItem;
+  speedKmh?: number; // API에서 받은 예상 이동 속도
   className?: string;
 }
 
-const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "" }) => {
+const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, speedKmh, className = "" }) => {
   const mapRef = useRef<kakao.maps.Map>(null);
-  const [walkingDistance, setWalkingDistance] = React.useState(
-    getDynamicWalkingDistance(person.occurDate)
-  );
+  
+  // speedKmh가 있으면 해당 값을 사용, 없으면 기존 로직 사용
+  const getInitialWalkingDistance = () => {
+    if (speedKmh && speedKmh > 0) {
+      return getWalkingDistanceBySpeed(person.createdAt, speedKmh);
+    }
+    return getDynamicWalkingDistance(person.occurDate);
+  };
+  
+  const [walkingDistance, setWalkingDistance] = React.useState(getInitialWalkingDistance());
   // createdAt 기준으로 경과 시간 계산
   const [elapsedHours, setElapsedHours] = React.useState(
     Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60))
@@ -23,17 +31,25 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
   
   // 실시간으로 도보 범위와 경과 시간 업데이트 (1초마다) - createdAt 기준
   useEffect(() => {
+    const updateWalkingDistance = () => {
+      if (speedKmh && speedKmh > 0) {
+        setWalkingDistance(getWalkingDistanceBySpeed(person.createdAt, speedKmh));
+      } else {
+        setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+      }
+    };
+    
     // 즉시 한 번 계산
-    setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+    updateWalkingDistance();
     setElapsedHours(Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60)));
     
     const interval = setInterval(() => {
-      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+      updateWalkingDistance();
       setElapsedHours(Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60)));
     }, 1000); // 1초마다 업데이트
 
     return () => clearInterval(interval);
-  }, [person.createdAt, person.occurDate]);
+  }, [person.createdAt, person.occurDate, speedKmh]);
 
   const radiusText = `${(walkingDistance / 1000).toFixed(1)}km`;
   const areaText = `${(Math.PI * walkingDistance * walkingDistance / 1000000).toFixed(1)}km²`;
@@ -87,6 +103,11 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
           <h3 className="font-semibold text-blue-900">예상 이동 범위</h3>
           <div className="text-sm text-blue-700">
             반경 {radiusText} • 면적 {areaText}
+            {speedKmh && speedKmh > 0 && (
+              <span className="ml-2 text-xs bg-blue-100 px-2 py-1 rounded">
+                속도: {speedKmh}km/h
+              </span>
+            )}
           </div>
         </div>
       </div>
