@@ -33,31 +33,22 @@ public class ReportController {
 
     @PostMapping(consumes = "multipart/form-data")
     public ApiResponse<ReportResponse> createReportWithFile(
-            @RequestParam("missingPersonId") Long missingPersonId,
-            @RequestParam(value = "sightingDate", required = false) String sightingDate,
-            @RequestParam(value = "sightingTime", required = false) String sightingTime,
-            @RequestParam("sightingLocation") String sightingLocation,
+            @RequestParam("caseId") Long caseId,
+            @RequestParam(value = "sightedAt", required = false) String sightedAtStr,
+            @RequestParam("location") String location,
             @RequestParam("certainty") String certaintyStr,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "photos[0]", required = false) MultipartFile photo) {
+            @RequestParam(value = "attachment", required = false) MultipartFile attachment) {
 
-        log.info("신고 접수 요청 (multipart) - MissingPersonId: {}, Location: {}", missingPersonId, sightingLocation);
+        log.info("신고 접수 요청 (multipart) - CaseId: {}, Location: {}", caseId, location);
 
-        // Parse sighting date and time
+        // Parse sightedAt if provided
         LocalDateTime sightedAt = null;
-        if (sightingDate != null && !sightingDate.isEmpty()) {
+        if (sightedAtStr != null && !sightedAtStr.isEmpty()) {
             try {
-                if (sightingTime != null && !sightingTime.isEmpty()) {
-                    // Combine date and time: "2024-01-15" + "14:30" -> "2024-01-15T14:30:00"
-                    String dateTimeStr = sightingDate + "T" + sightingTime + ":00";
-                    sightedAt = LocalDateTime.parse(dateTimeStr);
-                } else {
-                    // Only date provided, set time to current time
-                    sightedAt = LocalDateTime.parse(sightingDate + "T00:00:00");
-                }
+                sightedAt = LocalDateTime.parse(sightedAtStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             } catch (Exception e) {
-                log.warn("Invalid sighting date/time format: {} {}", sightingDate, sightingTime);
-                sightedAt = LocalDateTime.now();
+                log.warn("Invalid sightedAt format: {}", sightedAtStr);
             }
         }
 
@@ -72,15 +63,15 @@ public class ReportController {
 
         // Handle file upload if present
         String attachmentUrl = null;
-        if (photo != null && !photo.isEmpty()) {
-            attachmentUrl = reportService.uploadAttachment(photo);
+        if (attachment != null && !attachment.isEmpty()) {
+            attachmentUrl = reportService.uploadAttachment(attachment);
         }
 
         // Create request DTO
         CreateReportRequest request = new CreateReportRequest(
-            missingPersonId,
+            caseId,
             sightedAt,
-            sightingLocation,
+            location,
             certainty,
             description,
             attachmentUrl

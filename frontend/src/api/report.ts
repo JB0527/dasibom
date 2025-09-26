@@ -6,7 +6,7 @@ export const reportApi = {
   // 신고 제출
   submitReport: async (reportData: ReportFormData): Promise<ReportSubmission> => {
     const formData = new FormData();
-    
+
     // 기본 정보 추가
     formData.append('missingPersonId', reportData.missingPersonId);
     formData.append('reporterName', reportData.reporterName);
@@ -24,14 +24,14 @@ export const reportApi = {
     if (reportData.additionalInfo) {
       formData.append('additionalInfo', reportData.additionalInfo);
     }
-    
+
     // 파일 첨부
     if (reportData.photos) {
       reportData.photos.forEach((photo, index) => {
         formData.append(`photos[${index}]`, photo);
       });
     }
-    
+
     if (reportData.videos) {
       reportData.videos.forEach((video, index) => {
         formData.append(`videos[${index}]`, video);
