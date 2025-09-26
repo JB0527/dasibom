@@ -21,7 +21,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick }) => {
   const menuItems = [
     { id: 'map', label: '실종 지도 페이지' },
     { id: 'missing-list', label: '실종자 목록' },
-    { id: 'report', label: '실종자 접수 페이지' }
+    { id: 'cctv', label: 'CCTV탐색' }
   ];
 
   return (
