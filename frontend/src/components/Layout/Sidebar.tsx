@@ -24,8 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, currentPage }) => {
         activeMenu={activeMenu} 
         onMenuClick={handleMenuClick} 
       />
-      {/* 지도 페이지와 목록 페이지에서 MissingStatusBoard 표시 */}
-      {(currentPage === 'map' || currentPage === 'missing-list') && <MissingStatusBoard />}
+      {/* 지도 페이지, 목록 페이지, CCTV 페이지에서 MissingStatusBoard 표시 */}
+      {(currentPage === 'map' || currentPage === 'missing-list' || currentPage === 'cctv') && <MissingStatusBoard />}
       <ReportNumber />
     </div>
   );
