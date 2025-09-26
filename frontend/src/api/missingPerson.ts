@@ -95,6 +95,8 @@ export const missingPersonApi = {
       height: apiPerson.height,
       weight: apiPerson.bdwgh,
       photoUrl: apiPerson.fileUrl || `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg width="80" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" fill="#4F46E5"/><text x="40" y="45" text-anchor="middle" fill="white" font-family="Arial" font-size="32" font-weight="bold">${apiPerson.nm.charAt(0)}</text></svg>`)}`, // 실제 사진 URL 또는 기본사진 생성
+      aiImageUrl: apiPerson.aiImageUrl, // AI가 예측한 이미지 URL
+      speedKmh: apiPerson.speedKmh, // 예상 이동 속도
       
       // API에서 제공하는 모든 추가 정보들
       alldressingDscd: apiPerson.alldressingDscd,

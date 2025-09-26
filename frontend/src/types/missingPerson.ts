@@ -17,6 +17,8 @@ export interface MissingPersonDetail {
   height: number; // cm
   weight: number; // kg
   photoUrl: string;
+  aiImageUrl?: string; // AI가 예측한 이미지 URL
+  speedKmh?: number; // 예상 이동 속도 (km/h)
   
   // API에서 제공하는 추가 정보들
   alldressingDscd?: string; // 복장
@@ -48,6 +50,8 @@ export interface ApiMissingPerson {
   haircolrDscd: string; // 머리색
   tknphotolength: number; // 사진길이
   fileUrl: string; // 실제 사진 URL
+  aiImageUrl?: string; // AI가 예측한 이미지 URL
+  speedKmh?: number; // 예상 이동 속도 (km/h)
   msspsnIdntfccd: number; // 실종자 식별 코드
   lastCheckedAt: string; // 마지막 확인 시간
   sourceUpdatedAt: string; // 소스 업데이트 시간

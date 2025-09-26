@@ -265,3 +265,31 @@ export const getSelectedCircleSizeByAge = (age: number, mapLevel: number = 3): n
   const baseSize = getCircleSizeByAge(age, mapLevel);
   return baseSize + 20; // 선택 시 20px 더 크게
 };
+
+/**
+ * API에서 받은 speedKmh 값을 사용하여 도보 예측 거리 계산
+ * @param createdAt 데이터 생성 시간 (ISO 8601 형식)
+ * @param speedKmh API에서 받은 예상 이동 속도 (km/h)
+ * @returns 도보 예측 거리 (미터)
+ */
+export const getWalkingDistanceBySpeed = (createdAt: string, speedKmh: number): number => {
+  // 데이터 생성 시간으로부터 경과 시간 계산 (시간 단위)
+  const now = new Date();
+  const createdTime = new Date(createdAt);
+  
+  // 유효하지 않은 날짜 처리
+  if (isNaN(createdTime.getTime())) {
+    return 0;
+  }
+  
+  const hoursElapsed = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
+  
+  // 최소 0시간, 최대 72시간(3일)으로 제한
+  const realisticHours = Math.min(72, Math.max(0, hoursElapsed));
+  
+  // API에서 받은 속도로 거리 계산
+  const walkingDistance = speedKmh * realisticHours;
+  
+  // 미터 단위로 변환
+  return Math.round(walkingDistance * 1000);
+};

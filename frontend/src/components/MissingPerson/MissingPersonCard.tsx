@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { calculateElapsedTime } from '../../utils/timeUtils';
+import { calculateElapsedTime, calculateElapsedTimeFromCreated } from '../../utils/timeUtils';
 import { getTargetCodeLabel } from '../../utils/targetCodeUtils';
 import type { MissingPersonListItem } from '../../types/missingPerson';
 
@@ -11,16 +11,39 @@ interface MissingPersonCardProps {
 const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
   
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
+  // 24시간 이내인지 확인하는 함수
+  const isWithin24Hours = (occurDate: string) => {
+    const now = new Date();
+    const occurTime = new Date(
+      parseInt(occurDate.substring(0, 4)),
+      parseInt(occurDate.substring(4, 6)) - 1,
+      parseInt(occurDate.substring(6, 8)),
+      12, 0, 0
+    );
+    const diffMs = now.getTime() - occurTime.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours <= 24;
+  };
+
+  // 경과시간 계산 함수 - 24시간 이내는 createdAt 기준, 초과는 occurDate 기준
+  const calculateElapsedTimeForPerson = () => {
+    if (isWithin24Hours(person.occurDate) && person.createdAt) {
+      return calculateElapsedTimeFromCreated(person.createdAt);
+    } else {
+      return calculateElapsedTime(person.occurDate);
+    }
+  };
+
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTimeForPerson());
 
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.occurDate));
+      setElapsedTime(calculateElapsedTimeForPerson());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.occurDate]);
+  }, [person.occurDate, person.createdAt]);
 
 
   // 경과 시간에 따른 상태 표시
