@@ -1,9 +1,11 @@
 import React from 'react';
 import type { CertaintyOption } from '../../types/report';
 
+type CertaintyValue = CertaintyOption['value'];
+
 interface CertaintySelectorProps {
-  value: 'high' | 'medium' | 'low';
-  onChange: (value: 'high' | 'medium' | 'low') => void;
+  value: CertaintyValue;
+  onChange: (value: CertaintyValue) => void;
   options: CertaintyOption[];
 }
 

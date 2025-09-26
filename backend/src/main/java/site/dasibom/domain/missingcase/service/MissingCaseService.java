@@ -154,6 +154,7 @@ public class MissingCaseService {
                 .createdAt(LocalDateTime.of(2025, 9, 26, 16, 30, 15, 234567000))
                 .updatedAt(LocalDateTime.of(2025, 9, 26, 9, 15, 30, 125789000))
                 .aiImageUrl("https://seoul-ht-06-dasibom.s3.us-west-1.amazonaws.com/ai_image/%EC%9D%B4%EB%AF%BC%EC%A4%80.png")
+                .speedKmh(4.8) // 26세 남성, 건강한 체격
                 .build());
 
         // 변정효
@@ -183,6 +184,7 @@ public class MissingCaseService {
                 .createdAt(LocalDateTime.of(2025, 9, 26, 14, 45, 30, 345678000))
                 .updatedAt(LocalDateTime.of(2025, 9, 26, 10, 22, 15, 236890000))
                 .aiImageUrl("https://seoul-ht-06-dasibom.s3.us-west-1.amazonaws.com/ai_image/%EB%B3%80%EC%A0%95%ED%9A%A8.png")
+                .speedKmh(4.2) // 26세 남성, 통통한 체격
                 .build());
 
         // 민지소
@@ -212,6 +214,7 @@ public class MissingCaseService {
                 .createdAt(LocalDateTime.of(2025, 9, 26, 13, 20, 45, 567890000))
                 .updatedAt(LocalDateTime.of(2025, 9, 26, 11, 35, 42, 459012000))
                 .aiImageUrl("https://seoul-ht-06-dasibom.s3.us-west-1.amazonaws.com/ai_image/%EB%AF%BC%EC%A7%80%EC%86%8C.png")
+                .speedKmh(4.0) // 26세 남성, 왜소한 체격
                 .build());
 
         // 류영재
@@ -241,6 +244,7 @@ public class MissingCaseService {
                 .createdAt(LocalDateTime.of(1985, 3, 16, 9, 30, 0, 123456000))
                 .updatedAt(LocalDateTime.of(2025, 9, 26, 8, 45, 12, 791456000))
                 .aiImageUrl("https://seoul-ht-06-dasibom.s3.us-west-1.amazonaws.com/ai_image/%EB%A5%98%EC%98%81%EC%9E%AC.png")
+                .speedKmh(3.2) // 66세 남성, 보통 체격
                 .build());
 
         return dummyList;

@@ -42,4 +42,5 @@ public class MissingCaseListResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String aiImageUrl;
+    private Double speedKmh; // AI 예측 걸음 속도(km/h)
 }
