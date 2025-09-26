@@ -20,6 +20,9 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleEtc(Exception e) {
-        return ResponseEntity.internalServerError().body(ApiResponse.error("Unexpected error"));
+        e.printStackTrace();
+        System.err.println("Exception caught: " + e.getMessage());
+        System.err.println("Exception type: " + e.getClass().getName());
+        return ResponseEntity.internalServerError().body(ApiResponse.error("Unexpected error: " + e.getMessage()));
     }
 }

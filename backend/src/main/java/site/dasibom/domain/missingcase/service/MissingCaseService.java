@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import site.dasibom.domain.missingcase.dto.CaseResponse;
-import site.dasibom.domain.missingcase.dto.CreateCaseRequest;
 import site.dasibom.domain.missingcase.dto.MissingCaseListResponse;
 import site.dasibom.domain.missingcase.entity.MissingCase;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
@@ -63,28 +61,6 @@ public class MissingCaseService {
         return repo.count();
     }
     
-    /**
-     * 실종 사건 수정
-     */
-    @Transactional
-    public CaseResponse update(Long id, CreateCaseRequest req) {
-        MissingCase missingCase = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("실종 사건을 찾을 수 없습니다. ID: " + id));
-
-        // CreateCaseRequest의 필드들로 엔티티 업데이트
-        // 실제 필드는 CreateCaseRequest DTO를 확인해야 하지만, 일반적인 패턴으로 구현
-        missingCase = repo.save(missingCase);
-
-        return convertToCaseResponse(missingCase);
-    }
-
-    /**
-     * MissingCase 엔티티를 CaseResponse DTO로 변환
-     */
-    private CaseResponse convertToCaseResponse(MissingCase missingCase) {
-        return CaseResponse.from(missingCase);
-    }
-
     /**
      * MissingCase 엔티티를 MissingCaseListResponse DTO로 변환
      */

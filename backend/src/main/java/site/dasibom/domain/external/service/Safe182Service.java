@@ -16,6 +16,8 @@ import site.dasibom.domain.common.enums.CaseStatus;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -42,13 +44,16 @@ public class Safe182Service {
                 return List.of();
             }
             
-            // 응답 데이터를 MissingCase 엔티티로 변환 및 저장
+            // 1. Safe182 API에 없는 케이스들을 CLOSED로 변경
+            int closedCount = autoCloseMissingCases(response.getList());
+            
+            // 2. 응답 데이터를 MissingCase 엔티티로 변환 및 저장
             List<MissingCase> savedCases = response.getList().stream()
                 .map(this::convertToMissingCase)
                 .map(this::saveOrUpdateMissingCase)
                 .collect(Collectors.toList());
             
-            log.info("Safe182 데이터 동기화 완료 - 총 {}건 처리", savedCases.size());
+            log.info("Safe182 데이터 동기화 완료 - 저장/업데이트: {}건, 자동 종료: {}건", savedCases.size(), closedCount);
             return savedCases;
             
         } catch (Exception e) {
@@ -184,6 +189,53 @@ public class Safe182Service {
         if (newData.getAlldressingDscd() != null) {
             existing.setAlldressingDscd(newData.getAlldressingDscd());
         }
+    }
+    
+    /**
+     * Safe182 API에 없는 케이스들을 자동으로 CLOSED 상태로 변경
+     */
+    private int autoCloseMissingCases(List<Safe182Response.Safe182MissingPerson> apiCases) {
+        // 안전장치: API 응답이 비정상적으로 적으면 처리 중단
+        if (apiCases.size() < 50) {
+            log.warn("Safe182 API 응답이 비정상적으로 적습니다 ({}건). 자동 종료 처리를 건너뜁니다.", apiCases.size());
+            return 0;
+        }
+        
+        // API에서 활성 케이스들의 복합키 세트 생성 (발생일자 + 이름)
+        Set<String> activeApiKeys = apiCases.stream()
+            .map(person -> person.getOccrde() + "|" + person.getNm())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+        
+        // 현재 OPEN 상태인 DB 케이스들 조회
+        List<MissingCase> openCases = missingCaseRepository.findByCaseStatus(CaseStatus.OPEN);
+        
+        // API에 없는 케이스들을 찾아서 CLOSED로 변경
+        List<MissingCase> casesToClose = openCases.stream()
+            .filter(dbCase -> {
+                String dbKey = dbCase.getOccrde() + "|" + dbCase.getNm();
+                return !activeApiKeys.contains(dbKey);
+            })
+            .collect(Collectors.toList());
+        
+        // 케이스들을 CLOSED로 변경
+        casesToClose.forEach(this::closeCase);
+        
+        log.info("자동 종료 처리 완료 - API 활성 케이스: {}건, DB OPEN 케이스: {}건, 종료 처리: {}건", 
+                activeApiKeys.size(), openCases.size(), casesToClose.size());
+        
+        return casesToClose.size();
+    }
+    
+    /**
+     * 개별 케이스를 CLOSED 상태로 변경
+     */
+    private void closeCase(MissingCase missingCase) {
+        missingCase.setCaseStatus(CaseStatus.CLOSED);
+        missingCase.setEndedAt(LocalDateTime.now());
+        missingCase.setLastCheckedAt(LocalDateTime.now());
+        missingCaseRepository.save(missingCase);
+        log.info("실종자 케이스 자동 종료: {} ({})", missingCase.getNm(), missingCase.getOccrde());
     }
     
     /**
