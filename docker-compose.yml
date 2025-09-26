@@ -1,0 +1,130 @@
+services:
+  # PostgreSQL with PostGIS
+  database:
+    image: postgis/postgis:16-3.4
+    container_name: dasibom-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dasibom}
+      POSTGRES_USER: ${DB_USERNAME:-dasibom_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasibom_password}
+      TZ: Asia/Seoul
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dasibom_user} -d ${POSTGRES_DB:-dasibom}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: dasibom-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dasibom-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dasibom}
+      DB_USERNAME: ${DB_USERNAME:-dasibom_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dasibom_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_PORT: 8080
+      # Safe182 API Configuration
+      SAFE182_BASE_URL: ${SAFE182_BASE_URL:-https://www.safe182.go.kr}
+      SAFE182_AUTH_KEY: ${SAFE182_AUTH_KEY:-bca2e2d148a24ced}
+      SAFE182_ESNTL_ID: ${SAFE182_ESNTL_ID:-10000838}
+      SAFE182_SCHEDULER_ENABLED: ${SAFE182_SCHEDULER_ENABLED:-true}
+      SAFE182_SCHEDULER_FIXED_RATE: ${SAFE182_SCHEDULER_FIXED_RATE:-300000}
+      SAFE182_SCHEDULER_INITIAL_DELAY: ${SAFE182_SCHEDULER_INITIAL_DELAY:-60000}
+      # Security Configuration
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_here_change_in_production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ec2-54-193-170-230.us-west-1.compute.amazonaws.com}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # AWS Configuration
+      AWS_REGION: ${AWS_REGION:-us-west-1}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-seoul-ht-06-dasibom}
+      APP_URL: ${APP_URL:-https://ec2-54-193-170-230.us-west-1.compute.amazonaws.com}
+      # JVM options for production
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1024m
+        -XX:+UseG1GC
+        -XX:G1HeapRegionSize=16m
+        -XX:+UseStringDeduplication
+        -Djava.security.egd=file:/dev/./urandom
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dasibom-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/html:/var/www/html:ro
+      - ./nginx/certbot:/var/www/certbot
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dasibom-network
+    restart: unless-stopped
+
+networks:
+  dasibom-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
