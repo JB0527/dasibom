@@ -44,6 +44,7 @@ nb-configuration.xml
 # ===============================
 # Gradle
 # ===============================
+gradle-8.7/
 .gradle/
 build/
 **/build/
