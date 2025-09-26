@@ -41,4 +41,5 @@ public class MissingCaseListResponse {
     private LocalDateTime sourceUpdatedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String aiImageUrl;
 }

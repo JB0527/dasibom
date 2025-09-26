@@ -83,4 +83,7 @@ public class MissingCase extends BaseEntity {
     private LocalDateTime endedAt; // 해제시각
     private LocalDateTime lastCheckedAt; // 마지막폴링확인
     private LocalDateTime sourceUpdatedAt; // 원본갱신시각
+
+    @Column(columnDefinition = "TEXT")
+    private String aiImageUrl; // AI 생성 이미지 URL
 }
