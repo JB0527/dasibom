@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
+import { calculateElapsedTime } from '../../utils/timeUtils';
+import { getTargetCodeLabel } from '../../utils/targetCodeUtils';
 import type { MissingPersonListItem } from '../../types/missingPerson';
 
 interface MissingPersonCardProps {
@@ -11,21 +12,16 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
   
   const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
-  const [walkingDistance, setWalkingDistance] = useState(
-    getDynamicWalkingDistance(person.occurDate)
-  );
 
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsedTime(calculateElapsedTime(person.occurDate));
-      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
   }, [person.occurDate]);
 
-  // 컴포넌트 마운트 시 상세 정보 가져오기
 
   // 경과 시간에 따른 상태 표시
   const getStatusInfo = () => {
@@ -41,28 +37,27 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   };
 
   const statusInfo = getStatusInfo();
-  const radiusText = `${(walkingDistance / 1000).toFixed(1)}km`;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-      <div className="flex flex-col sm:flex-row">
-        {/* 왼쪽 프로필 사진 영역 */}
-        <div className="flex-shrink-0 w-full sm:w-56 bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6 sm:p-8">
-          <div className="relative w-32 h-32 sm:w-48 sm:h-48">
+      <div className="flex">
+        {/* 왼쪽 프로필 사진 영역 - 높이 조정 */}
+        <div className="flex-shrink-0 w-28 h-32 sm:w-36 sm:h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start p-3">
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24">
             <img
               src={person.photoUrl}
               alt={person.name}
-              className="w-full h-full object-cover rounded-xl shadow-lg"
+              className="w-full h-full object-cover rounded-lg shadow-sm"
             />
-            <div className="absolute -top-2 -right-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-semibold border shadow-sm ${statusInfo.color}`}>
+            <div className="absolute -top-1 -right-1">
+              <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
             </div>
           </div>
-          {/* 경과시간 - 사진 밑에 별도 영역 */}
-          <div className="mt-4 w-full text-center">
-            <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold text-gray-800 shadow-sm border border-white/50">
+          {/* 경과시간 - 이미지 밑에 표시 */}
+          <div className="mt-2 w-full text-center">
+            <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-semibold text-gray-800 shadow-sm border border-white/50">
               {elapsedTime.hours < 24 
                 ? elapsedTime.formatted 
                 : elapsedTime.hours < 168 
@@ -77,77 +72,118 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           </div>
         </div>
         
-        {/* 오른쪽 정보 영역 */}
-        <div className="flex-1 p-6 sm:p-8 flex flex-col">
+        {/* 오른쪽 정보 영역 - 더 컴팩트하게 */}
+        <div className="flex-1 p-4 flex flex-col">
           <div className="flex-1">
-            {/* 이름과 기본 정보 */}
-            <div className="mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight mb-3">
+            {/* 헤더: 이름, 나이, 성별, 대상 */}
+            <div className="mb-3">
+              <h3 className="text-lg font-bold text-gray-900 leading-tight">
                 {person.name}
               </h3>
-              <div className="flex items-center gap-2">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+              <div className="flex items-center gap-2 mt-1">
+                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-semibold">
                   {person.age || person.ageNow || 'N/A'}세
                 </span>
-                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">
+                <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs font-semibold">
                   {person.sexCode === '1' ? '남성' : person.sexCode === '2' ? '여성' : 'N/A'}
                 </span>
-              </div>
-            </div>
-            
-            {/* 기본 정보 - 모바일에서는 세로로, 데스크톱에서는 2열로 */}
-            <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-3 sm:space-y-0 text-sm mb-6">
-              <div className="flex items-center bg-gray-50 rounded-lg p-3">
-                <span className="text-gray-600 font-medium min-w-[3rem]">상태</span>
-                <span className="ml-3 text-gray-900 font-semibold">
-                  {person.status === 'OPEN' ? '진행중' : '해제'}
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  person.targetCode === '010' ? 'bg-green-100 text-green-700' : // 정상아동
+                  person.targetCode === '020' ? 'bg-blue-100 text-blue-700' : // 가출인
+                  person.targetCode === '040' ? 'bg-purple-100 text-purple-700' : // 시설보호무연고자
+                  person.targetCode === '060' || person.targetCode === '061' || person.targetCode === '062' ? 'bg-orange-100 text-orange-700' : // 지적장애인
+                  person.targetCode === '070' ? 'bg-red-100 text-red-700' : // 치매질환자
+                  'bg-gray-100 text-gray-700' // 불상(기타)
+                }`}>
+                  {getTargetCodeLabel(person.targetCode)}
                 </span>
               </div>
-              <div className="flex items-center bg-gray-50 rounded-lg p-3">
-                <span className="text-gray-600 font-medium min-w-[3rem]">대상코드</span>
-                <span className="ml-3 text-gray-900 font-semibold">{person.targetCode || 'N/A'}</span>
+            </div>
+            
+            {/* 실종 정보 - 컴팩트하게 */}
+            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-500 text-xs block">발생일</span>
+                  <span className="text-gray-900 font-semibold text-sm">
+                    {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 text-xs block">발생장소</span>
+                  <span className="text-gray-900 font-semibold text-sm truncate">{person.occurAddress || 'N/A'}</span>
+                </div>
               </div>
             </div>
             
-            {/* 실종 정보 */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 mb-6">
-              <h4 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">실종 정보</h4>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <div>
-                    <span className="text-gray-600 font-medium text-sm block">발생일</span>
-                    <span className="text-gray-900 font-semibold">
-                      {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
+            {/* 상세 정보 - 컴팩트하게 통합 */}
+            {(person.height || person.weight || person.frmDscd || person.faceshpeDscd || person.hairshpeDscd || person.haircolrDscd || person.alldressingDscd) && (
+              <div className="space-y-2 mb-3">
+                {/* 신체 정보 */}
+                {(person.height || person.weight) && (
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-gray-500 text-xs">신체:</span>
+                    {person.height && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        키 {person.height}cm
+                      </span>
+                    )}
+                    {person.weight && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        체중 {person.weight}kg
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* 외모 특징 */}
+                {(person.frmDscd || person.faceshpeDscd || person.hairshpeDscd || person.haircolrDscd) && (
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-gray-500 text-xs">외모:</span>
+                    {person.frmDscd && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {person.frmDscd}
+                      </span>
+                    )}
+                    {person.faceshpeDscd && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {person.faceshpeDscd}
+                      </span>
+                    )}
+                    {person.hairshpeDscd && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {person.hairshpeDscd}
+                      </span>
+                    )}
+                    {person.haircolrDscd && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {person.haircolrDscd}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* 복장 정보 */}
+                {person.alldressingDscd && person.alldressingDscd !== '불상' && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-500 text-xs">복장:</span>
+                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                      {person.alldressingDscd}
                     </span>
                   </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <div>
-                    <span className="text-gray-600 font-medium text-sm block">발생장소</span>
-                    <span className="text-gray-900 font-semibold">{person.occurAddress || 'N/A'}</span>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <div>
-                    <span className="text-gray-600 font-medium text-sm block">예상범위</span>
-                    <span className="text-blue-600 font-bold text-lg">{radiusText}</span>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
+            )}
             
-            {/* 버튼들 - 모바일에서는 세로로, 데스크톱에서는 오른쪽 하단에 고정 */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-auto sm:justify-end">
+            {/* 버튼들 - 컴팩트하게 */}
+            <div className="flex gap-2 mt-auto">
               <button
                 onClick={() => {
                   navigate(`/report/${person.id}`);
                 }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-semibold shadow-lg hover:shadow-xl flex-1 sm:flex-none sm:w-auto transform hover:scale-105"
+                className="bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold flex-1"
               >
-                📝 신고하기
+                📝 신고
               </button>
               <button
                 onClick={() => {
@@ -165,7 +201,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
                     });
                   }
                 }}
-                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 text-sm font-semibold flex-1 sm:flex-none sm:w-auto transform hover:scale-105"
+                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs font-semibold flex-1"
               >
                 🔗 공유
               </button>

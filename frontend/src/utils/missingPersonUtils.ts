@@ -6,7 +6,6 @@ import type { MissingPersonListItem } from '../types/missingPerson';
 export interface MissingStatusData {
   receivedCount: number;    // 실종 접수
   resolvedCount: number;    // 실종 해제
-  reportCount: number;      // 실종자 신고
 }
 
 /**
@@ -28,6 +27,20 @@ export const filterRecentMissingPersons = (persons: MissingPersonListItem[]) => 
     const createdTime = new Date(person.createdAt);
     const hoursElapsed = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
     return hoursElapsed <= 24; // 24시간 이내만 표시
+  });
+};
+
+/**
+ * 오늘 발생한 실종자만 필터링하는 함수 (occurDate 기준)
+ */
+export const filterTodayMissingPersons = (persons: MissingPersonListItem[]) => {
+  const today = new Date();
+  const todayStr = today.getFullYear().toString() + 
+    (today.getMonth() + 1).toString().padStart(2, '0') + 
+    today.getDate().toString().padStart(2, '0');
+  
+  return persons.filter(person => {
+    return person.occurDate === todayStr; // 오늘 발생한 사건만
   });
 };
 
@@ -56,15 +69,11 @@ export const filterPersonsForMap = (persons: MissingPersonListItem[]) => {
  * 실종 현황 데이터 생성
  */
 export const getMissingStatusData = (persons: MissingPersonListItem[]): MissingStatusData => {
-  const openPersons = persons.filter(person => person.status === 'OPEN');
-  const closedPersons = persons.filter(person => person.status === 'CLOSED');
-  
-  // 24시간 이내 실종자 수를 신고 수로 사용 (실제 데이터 기반)
-  const recentPersons = filterRecentMissingPersons(persons);
+  // 오늘 발생한 실종자 수 (occurDate 기준)
+  const todayPersons = filterTodayMissingPersons(persons);
   
   return {
-    receivedCount: openPersons.length,  // 현재 열린 케이스 수
-    resolvedCount: closedPersons.length,   // 해제된 케이스 수
-    reportCount: recentPersons.length     // 24시간 이내 실종자 수 (신고 수로 사용)
+    receivedCount: todayPersons.length,  // 오늘 발생한 실종자 수 (실종 접수)
+    resolvedCount: persons.length   // 전체 cases 개수 (누적 접수)
   };
 };

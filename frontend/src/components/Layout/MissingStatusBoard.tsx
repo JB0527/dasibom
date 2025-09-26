@@ -7,7 +7,6 @@ interface MissingStatusBoardProps {
   date?: string;
   receivedCount?: number;
   resolvedCount?: number;
-  reportCount?: number;
   isMobile?: boolean;
   missingPersons?: any[]; // 외부에서 데이터를 전달받음
 }
@@ -16,14 +15,12 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
   date,
   receivedCount,
   resolvedCount,
-  reportCount,
   isMobile = false
 }) => {
   const { missingPersons } = useStatusBoard();
   const [statusData, setStatusData] = useState<MissingStatusData>({
     receivedCount: 0,
-    resolvedCount: 0,
-    reportCount: 0
+    resolvedCount: 0
   });
 
   // 상태 데이터 계산
@@ -38,7 +35,6 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
   const finalDate = date || getTodayFormatted();
   const finalReceivedCount = receivedCount ?? statusData.receivedCount;
   const finalResolvedCount = resolvedCount ?? statusData.resolvedCount;
-  const finalReportCount = reportCount ?? statusData.reportCount;
   return (
     <div className={isMobile ? "px-4 py-2 bg-white shadow-sm" : "p-4"}>
       <div className={`bg-yellow-50 border border-yellow-200 rounded-lg ${isMobile ? "p-3" : "p-4"}`}>
@@ -47,16 +43,12 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
         </h3>
         <div className={`space-y-1 ${isMobile ? "text-xs" : "space-y-2 text-sm"}`}>
           <div className="flex justify-between">
-            <span className="text-gray-600">실종 접수</span>
+            <span className="text-gray-600">오늘 접수</span>
             <span className="font-semibold text-red-600">{finalReceivedCount}건</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">실종 해제</span>
+            <span className="text-gray-600">누적 접수</span>
             <span className="font-semibold text-green-600">{finalResolvedCount}건</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">실종자 신고</span>
-            <span className="font-semibold text-blue-600">{finalReportCount}건</span>
           </div>
         </div>
         {!isMobile && (
