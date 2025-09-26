@@ -6,7 +6,6 @@ import type { MissingPersonDetail, MissingPersonMapItem } from '../../types/miss
 import { calculateElapsedTimeFromCreated } from '../../utils/timeUtils';
 import { getTargetCodeLabel } from '../../utils/targetCodeUtils';
 import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
-import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface PersonInfoModalProps {
   isOpen: boolean;
@@ -286,7 +285,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
                   src={detailInfo.aiImageUrl} 
                   alt={`${person.name} AI 예측 이미지`}
                   className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => handleImageClick(detailInfo.aiImageUrl)}
+                  onClick={() => handleImageClick(detailInfo.aiImageUrl!)}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg width="400" height="320" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="320" fill="#F3F4F6"/><text x="200" y="160" text-anchor="middle" fill="#6B7280" font-family="Arial" font-size="16">AI 이미지 로드 실패</text></svg>`)}`;
