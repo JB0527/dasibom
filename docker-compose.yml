@@ -66,7 +66,7 @@ services:
       SAFE182_SCHEDULER_INITIAL_DELAY: ${SAFE182_SCHEDULER_INITIAL_DELAY:-60000}
       # Security Configuration
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_here_change_in_production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://ec2-54-193-170-230.us-west-1.compute.amazonaws.com}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ec2-54-193-170-230.us-west-1.compute.amazonaws.com}
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # AWS Configuration
@@ -108,8 +108,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx-http.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/html:/var/www/html:ro
+      - ./nginx/certbot:/var/www/certbot
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       backend:
         condition: service_healthy
