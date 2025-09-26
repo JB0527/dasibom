@@ -1,5 +1,6 @@
 package site.dasibom.domain.missingcase.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import site.dasibom.global.common.ApiResponse;
@@ -46,14 +47,8 @@ public class MissingCaseController {
     
     // 지도용 실종 사건 조회 - TODO: 지도에 최적화된 데이터 구조 고려 필요
     @GetMapping("/map")
-    public ApiResponse<List<CaseResponse>> getForMap() {
-        return ApiResponse.ok(service.list()); // 현재는 일반 목록과 동일, 추후 최적화 필요
-    }
-
-    // 실종 사건 수정 - TODO: 권한 확인 필요
-    @PatchMapping("/{id}")
-    public ApiResponse<CaseResponse> update(@PathVariable Long id, @RequestBody @Valid CreateCaseRequest req) {
-        return ApiResponse.ok(service.update(id, req));
+    public ApiResponse<List<MissingCaseListResponse>> getForMap() {
+        return ApiResponse.ok(service.getMissingCases()); // 현재는 일반 목록과 동일, 추후 최적화 필요
     }
     
     

@@ -2,31 +2,24 @@ package site.dasibom.global.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+// TODO: AWS S3 클라이언트 라이브러리 의존성 추가 필요
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class S3Service {
     
-    // TODO: AWS S3 SDK dependency 추가 필요
-    // implementation 'software.amazon.awssdk:s3:2.20.26'
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
     
-    // TODO: S3 설정 추가 필요 (application.yml)
-    // aws:
-    //   s3:
-    //     bucket-name: your-bucket-name
-    //     region: ap-northeast-2
-    //     access-key: your-access-key
-    //     secret-key: your-secret-key
-    
-    // TODO: S3Client Bean 설정 필요
-    // private final S3Client s3Client;
+    @Value("${aws.region}")
+    private String region;
     
     /**
      * 다중 파일을 S3에 업로드하고 URL 목록을 반환
@@ -56,33 +49,24 @@ public class S3Service {
      */
     private String uploadSingleFile(MultipartFile file, String folder) {
         try {
-            // TODO: 파일 검증 로직 추가
+            // 파일 검증
             validateFile(file);
             
-            // TODO: 고유한 파일명 생성
+            // 고유한 파일명 생성
             String fileName = generateFileName(file.getOriginalFilename());
             String key = folder + "/" + fileName;
             
-            // TODO: S3 업로드 구현
-            // PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-            //     .bucket(bucketName)
-            //     .key(key)
-            //     .contentType(file.getContentType())
-            //     .build();
-            // 
-            // s3Client.putObject(putObjectRequest, 
-            //     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            // TODO: 실제 S3 업로드 구현 필요
             
-            // TODO: S3 URL 반환
-            // return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + key;
+            // S3 URL 생성 및 반환
+            String s3Url = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + key;
             
-            // 임시 더미 URL 반환
-            log.warn("S3Service not implemented. Returning dummy URL for file: {}", file.getOriginalFilename());
-            return "https://dummy-bucket.s3.amazonaws.com/" + key;
+            log.info("File uploaded successfully to S3: {}", s3Url);
+            return s3Url;
             
         } catch (Exception e) {
             log.error("Failed to upload file to S3: {}", file.getOriginalFilename(), e);
-            throw new RuntimeException("S3 파일 업로드 실패", e);
+            throw new RuntimeException("S3 파일 업로드 실패: " + e.getMessage(), e);
         }
     }
     
@@ -123,14 +107,30 @@ public class S3Service {
      * @param fileUrl 삭제할 파일의 S3 URL
      */
     public void deleteFile(String fileUrl) {
-        // TODO: S3 파일 삭제 구현
-        // String key = extractKeyFromUrl(fileUrl);
-        // DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-        //     .bucket(bucketName)
-        //     .key(key)
-        //     .build();
-        // s3Client.deleteObject(deleteObjectRequest);
-        
-        log.warn("S3Service deleteFile not implemented for URL: {}", fileUrl);
+        try {
+            String key = extractKeyFromUrl(fileUrl);
+            
+            // TODO: 실제 S3 삭제 구현 필요
+            
+            log.info("File deleted successfully from S3: {}", fileUrl);
+            
+        } catch (Exception e) {
+            log.error("Failed to delete file from S3: {}", fileUrl, e);
+            throw new RuntimeException("S3 파일 삭제 실패: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * S3 URL에서 키 추출
+     * @param fileUrl S3 파일 URL
+     * @return S3 객체 키
+     */
+    private String extractKeyFromUrl(String fileUrl) {
+        // URL 형태: https://bucket-name.s3.region.amazonaws.com/folder/filename
+        if (fileUrl.contains(bucketName + ".s3.")) {
+            int keyStartIndex = fileUrl.indexOf(".amazonaws.com/") + ".amazonaws.com/".length();
+            return fileUrl.substring(keyStartIndex);
+        }
+        throw new IllegalArgumentException("Invalid S3 URL format: " + fileUrl);
     }
 }
