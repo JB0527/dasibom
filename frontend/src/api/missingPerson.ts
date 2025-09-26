@@ -1,6 +1,7 @@
 // 실종자 API
 import { apiClient } from './client';
 import type { MissingPersonDetail, MissingPersonListItem, ApiMissingPerson } from '../types/missingPerson';
+import type { MissingPersonReportData, MissingPersonReportResponse } from '../types/report';
 
 // API 응답을 MissingPersonListItem으로 변환 (상세 정보 포함)
 const convertApiResponse = (apiPerson: ApiMissingPerson): MissingPersonListItem => {
@@ -105,5 +106,11 @@ export const missingPersonApi = {
       createdAt: apiPerson.createdAt,
       updatedAt: apiPerson.updatedAt
     };
+  },
+
+  // 실종접수 API
+  submitMissingPersonReport: async (reportData: MissingPersonReportData): Promise<MissingPersonReportResponse> => {
+    const response = await apiClient.post('/reports', reportData);
+    return response.data;
   },
 };

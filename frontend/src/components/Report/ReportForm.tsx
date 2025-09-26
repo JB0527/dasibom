@@ -1,7 +1,7 @@
 // 신고 폼 컴포넌트
-import React, { useState, useRef, useEffect } from 'react';
-import { useReport } from '../../hooks/useReport';
-import type { ReportFormData, CertaintyOption } from '../../types/report';
+import React, { useState, useEffect, useRef } from 'react';
+import { useMissingPersonReport } from '../../hooks/useMissingPersonReport';
+import type { MissingPersonReportData, CertaintyOption } from '../../types/report';
 import type { MissingPersonDetail, MissingPersonListItem } from '../../types/missingPerson';
 import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 
@@ -13,19 +13,19 @@ interface ReportFormProps {
 
 const certaintyOptions: CertaintyOption[] = [
   {
-    value: 'low',
+    value: 'UNSURE',
     label: '의심',
     description: '불확실하지만 비슷해 보입니다',
     color: 'text-blue-600 bg-blue-50 border-blue-200'
   },
   {
-    value: 'medium',
+    value: 'LIKELY',
     label: '유력함',
     description: '아마도 본 것 같습니다',
     color: 'text-yellow-600 bg-yellow-50 border-yellow-200'
   },
   {
-    value: 'high',
+    value: 'CONFIRMED',
     label: '확신',
     description: '확실히 본 것 같습니다',
     color: 'text-red-600 bg-red-50 border-red-200'
@@ -37,22 +37,25 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   missingPerson, 
   onSuccess
 }) => {
-  const { submitReport, isSubmitting, error } = useReport();
+  const { submitMissingPersonReport, isSubmitting, error } = useMissingPersonReport();
   const { getCaseDetail } = useListMissingPerson();
   
   // 상세 정보 상태
   const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   
-  const [formData, setFormData] = useState<Partial<ReportFormData>>({
-    missingPersonId: missingPerson.id.toString(),
-    certainty: 'medium',
-    sightingDate: new Date().toISOString().split('T')[0],
-    sightingTime: new Date().toTimeString().slice(0, 5),
+  const [formData, setFormData] = useState<Partial<MissingPersonReportData>>({
+    caseId: missingPerson.id,
+    certainty: 'LIKELY',
+    location: '',
+    description: '',
+    reportedAt: new Date().toISOString(),
+    attachmentUrl: '',
   });
   
   const [photos, setPhotos] = useState<File[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  
 
   // 컴포넌트 마운트 시 상세 정보 가져오기
   useEffect(() => {
@@ -70,7 +73,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     loadDetailInfo();
   }, [missingPerson.id, getCaseDetail]);
 
-  const handleInputChange = (field: keyof ReportFormData, value: string | number) => {
+  const handleInputChange = (field: keyof MissingPersonReportData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -85,29 +88,50 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  // 파일을 URL로 변환하는 함수 (실제로는 서버에 업로드 후 URL 받아야 함)
+  const uploadFile = async (file: File): Promise<string> => {
+    // 임시로 로컬 URL 생성 (실제로는 서버 업로드 API 호출)
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.sightingLocation || !formData.description) {
+    if (!formData.location || !formData.description) {
       alert('필수 항목을 모두 입력해주세요.');
       return;
     }
 
-    const reportData: ReportFormData = {
-      missingPersonId: missingPerson.id.toString(),
-      reporterName: '익명', // 기본값
-      reporterPhone: '000-0000-0000', // 기본값
-      sightingDate: formData.sightingDate!,
-      sightingTime: formData.sightingTime!,
-      sightingLocation: formData.sightingLocation!,
-      latitude: 0, // 기본값
-      longitude: 0, // 기본값
+    // 파일이 있으면 업로드
+    let attachmentUrl = '';
+    if (photos.length > 0) {
+      try {
+        // 첫 번째 파일만 업로드 (실제로는 여러 파일 처리 가능)
+        attachmentUrl = await uploadFile(photos[0]);
+      } catch (error) {
+        console.error('파일 업로드 실패:', error);
+        alert('파일 업로드에 실패했습니다.');
+        return;
+      }
+    }
+
+    const reportData: MissingPersonReportData = {
+      caseId: missingPerson.id,
+      location: formData.location!,
       certainty: formData.certainty!,
       description: formData.description!,
-      photos: photos.length > 0 ? photos : undefined,
+      reportedAt: formData.reportedAt!,
+      attachmentUrl: attachmentUrl || undefined,
     };
 
-    const result = await submitReport(reportData);
+    const result = await submitMissingPersonReport(reportData);
     if (result) {
       onSuccess();
     }
@@ -202,30 +226,25 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              목격시각 <span className="text-red-500">*</span>
+              제보시각 <span className="text-red-500">*</span>
             </label>
             <input
-              type="text"
-              value={`${formData.sightingDate || ''} ${formData.sightingTime || ''}`}
-              onChange={(e) => {
-                const [date, time] = e.target.value.split(' ');
-                if (date) handleInputChange('sightingDate', date);
-                if (time) handleInputChange('sightingTime', time);
-              }}
+              type="datetime-local"
+              value={formData.reportedAt ? new Date(formData.reportedAt).toISOString().slice(0, 16) : ''}
+              onChange={(e) => handleInputChange('reportedAt', new Date(e.target.value).toISOString())}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="예: 2024-01-15 14:30"
               required
             />
           </div>
-
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               목격위치 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              value={formData.sightingLocation || ''}
-              onChange={(e) => handleInputChange('sightingLocation', e.target.value)}
+              value={formData.location || ''}
+              onChange={(e) => handleInputChange('location', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="예: 서울시 강남구 테헤란로 123"
               required
@@ -254,7 +273,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
         {/* 파일 첨부 */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">사진</h3>
+          <h3 className="text-lg font-semibold text-gray-900">사진 첨부</h3>
           
           <div>
             <input
@@ -270,7 +289,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               onClick={() => photoInputRef.current?.click()}
               className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
             >
-              첨부하기
+              📷 사진 첨부하기
             </button>
             {photos.length > 0 && (
               <div className="mt-2 space-y-1">
