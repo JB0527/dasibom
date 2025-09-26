@@ -26,6 +26,10 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
   const [detailInfo, setDetailInfo] = useState<MissingPersonDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   
+  // 이미지 확대 모달 상태
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
+  
   // 자체 타이머로 시간 관리 (1초마다) - createdAt 기준
   const [elapsedTime, setElapsedTime] = useState(
     person?.createdAt ? calculateElapsedTimeFromCreated(person.createdAt) : { 
@@ -99,6 +103,12 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
     }
   }, [person, elapsedTime]);
 
+  // 이미지 클릭 핸들러
+  const handleImageClick = useCallback((imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setShowImageModal(true);
+  }, []);
+
   if (!person) {
     return null;
   }
@@ -112,19 +122,20 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
       <div className="space-y-6">
 
         {/* 기본 정보 */}
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex gap-6">
-            <div className="flex-shrink-0 w-28 h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start p-3 rounded-lg">
-              <div className="relative w-20 h-20">
+        <div className="bg-white border rounded-lg p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            <div className="flex-shrink-0 w-full sm:w-28 h-auto sm:h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start p-3 rounded-lg">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20">
                 {(detailInfo?.photoUrl || person.photoUrl) ? (
                   <img 
                     src={detailInfo?.photoUrl || person.photoUrl} 
                     alt={person.name}
-                    className="w-full h-full object-cover rounded-lg shadow-sm"
+                    className="w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => handleImageClick(detailInfo?.photoUrl || person.photoUrl)}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 rounded-lg">
-                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                     </svg>
                   </div>
@@ -148,8 +159,8 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
             </div>
             
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{person.name}</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">{person.name}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">상태</span>
@@ -193,7 +204,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
         <div className="bg-white border rounded-lg p-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">상세 정보</h3>
           
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {/* 신체 정보 */}
             {detailInfo?.height && (
               <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
@@ -266,15 +277,16 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
         </div>
 
         {/* AI 이미지와 이동 범위 - 데스크탑에서는 한 행에 배치 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* AI 예측 이미지 */}
           {detailInfo?.aiImageUrl && (
             <div className="bg-white border rounded-lg overflow-hidden">
-              <div className="relative w-full h-80 bg-gray-50 flex items-center justify-center">
+              <div className="relative w-full h-64 sm:h-80 bg-gray-50 flex items-center justify-center">
                 <img 
                   src={detailInfo.aiImageUrl} 
                   alt={`${person.name} AI 예측 이미지`}
-                  className="max-w-full max-h-full object-contain"
+                  className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => handleImageClick(detailInfo.aiImageUrl)}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg width="400" height="320" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="320" fill="#F3F4F6"/><text x="200" y="160" text-anchor="middle" fill="#6B7280" font-family="Arial" font-size="16">AI 이미지 로드 실패</text></svg>`)}`;
@@ -289,7 +301,7 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
 
           {/* 도보 이동 범위 지도 */}
           <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="w-full h-80">
+            <div className="w-full h-64 sm:h-80">
               <WalkingRangeMap person={person} speedKmh={detailInfo?.speedKmh} />
             </div>
           </div>
@@ -307,21 +319,43 @@ const PersonInfoModal: React.FC<PersonInfoModalProps> = memo(({
         )}
 
         {/* 액션 버튼들 */}
-        <div className="flex gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <button
             onClick={handleReport}
-            className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+            className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
           >
             신고하기
           </button>
           <button
             onClick={handleShare}
-            className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
           >
             공유하기
           </button>
         </div>
       </div>
+
+      {/* 이미지 확대 모달 */}
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={() => setShowImageModal(false)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center p-4">
+            <img 
+              src={selectedImage} 
+              alt="확대된 이미지"
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </ModalBase>
   );
 });

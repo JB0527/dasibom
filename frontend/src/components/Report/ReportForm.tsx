@@ -55,7 +55,75 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   const [photos, setPhotos] = useState<File[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // 신고자 정보 상태
+  const [reporterInfo, setReporterInfo] = useState({
+    name: '',
+    carrier: '',
+    phoneNumber: '',
+    verificationCode: '',
+    isVerified: false
+  });
+
+  // 인증번호 전송 상태
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
   
+  // 인증 모달 상태
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // 신고자 정보 핸들러
+  const handleReporterInfoChange = (field: string, value: string) => {
+    setReporterInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 인증번호 전송 (목업)
+  const handleSendVerificationCode = async () => {
+    if (!reporterInfo.phoneNumber) {
+      alert('휴대폰 번호를 입력해주세요.');
+      return;
+    }
+
+    setIsSendingCode(true);
+    
+    // 목업: 2초 후 완료
+    setTimeout(() => {
+      setIsSendingCode(false);
+      setCodeSent(true);
+      alert('인증번호가 전송되었습니다.');
+    }, 2000);
+  };
+
+  // 인증번호 확인 (목업)
+  const handleVerifyCode = () => {
+    // 목업: 아무 값이나 입력해도 통과
+    if (reporterInfo.verificationCode) {
+      setReporterInfo(prev => ({
+        ...prev,
+        isVerified: true
+      }));
+      alert('인증이 완료되었습니다.');
+      setShowAuthModal(false);
+    } else {
+      alert('인증번호를 입력해주세요.');
+    }
+  };
+
+  // 접수하기 버튼 클릭 핸들러
+  const handleSubmitClick = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!reporterInfo.isVerified) {
+      setShowAuthModal(true);
+      return;
+    }
+    
+    // 인증이 완료된 경우 실제 제출
+    handleSubmit(e);
+  };
 
   // 컴포넌트 마운트 시 상세 정보 가져오기
   useEffect(() => {
@@ -271,6 +339,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           </div>
         </div>
 
+
         {/* 파일 첨부 */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">사진 첨부</h3>
@@ -320,7 +389,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         {/* 접수 버튼 */}
         <div className="pt-6">
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmitClick}
             disabled={isSubmitting}
             className="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
           >
@@ -328,6 +398,171 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           </button>
         </div>
       </form>
+
+      {/* 인증 모달 */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">신고자 인증</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  이름 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={reporterInfo.name}
+                  onChange={(e) => handleReporterInfoChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="이름을 입력하세요"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  통신사 <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleReporterInfoChange('carrier', 'SKT')}
+                    className={`p-4 border-2 rounded-lg transition-colors ${
+                      reporterInfo.carrier === 'SKT'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 mx-auto mb-2 bg-red-500 rounded flex items-center justify-center text-white font-bold text-sm">
+                        SK
+                      </div>
+                      <div className="text-sm font-medium">SKT</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleReporterInfoChange('carrier', 'KT')}
+                    className={`p-4 border-2 rounded-lg transition-colors ${
+                      reporterInfo.carrier === 'KT'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 mx-auto mb-2 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-sm">
+                        KT
+                      </div>
+                      <div className="text-sm font-medium">KT</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleReporterInfoChange('carrier', 'LG U+')}
+                    className={`p-4 border-2 rounded-lg transition-colors ${
+                      reporterInfo.carrier === 'LG U+'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 mx-auto mb-2 bg-pink-500 rounded flex items-center justify-center text-white font-bold text-sm">
+                        LG
+                      </div>
+                      <div className="text-sm font-medium">LG U+</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleReporterInfoChange('carrier', '알뜰폰')}
+                    className={`p-4 border-2 rounded-lg transition-colors ${
+                      reporterInfo.carrier === '알뜰폰'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 mx-auto mb-2 bg-purple-500 rounded flex items-center justify-center text-white font-bold text-sm">
+                        알
+                      </div>
+                      <div className="text-sm font-medium">알뜰폰</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  휴대폰 번호 <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    value={reporterInfo.phoneNumber}
+                    onChange={(e) => handleReporterInfoChange('phoneNumber', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="010-1234-5678"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendVerificationCode}
+                    disabled={isSendingCode || !reporterInfo.phoneNumber}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isSendingCode ? '전송 중...' : '인증번호 전송'}
+                  </button>
+                </div>
+              </div>
+              
+              {codeSent && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    인증번호 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={reporterInfo.verificationCode}
+                      onChange={(e) => handleReporterInfoChange('verificationCode', e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="인증번호를 입력하세요"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyCode}
+                      disabled={!reporterInfo.verificationCode}
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      인증 확인
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyCode}
+                disabled={!reporterInfo.verificationCode}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                인증 완료
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
