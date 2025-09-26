@@ -2,43 +2,62 @@ package site.dasibom.domain.report.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import site.dasibom.global.common.ApiResponse;
 import site.dasibom.domain.report.dto.CreateReportRequest;
 import site.dasibom.domain.report.dto.ReportResponse;
-import site.dasibom.domain.report.dto.ReportDetailResponse;
 import site.dasibom.domain.report.service.ReportService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
-@RestController 
-@RequestMapping("/api/reports") 
+@Slf4j
+@RestController
+@RequestMapping("/api/reports")
 @RequiredArgsConstructor
 public class ReportController {
-    private final ReportService service;
     
-    @PostMapping 
-    public ApiResponse<ReportResponse> create(@RequestBody @Valid CreateReportRequest req) { 
-        return ApiResponse.ok(service.create(req)); 
+    private final ReportService reportService;
+    
+    @PostMapping
+    public ResponseEntity<ReportResponse> createReport(@Valid @RequestBody CreateReportRequest request) {
+        log.info("신고 접수 요청 - CaseId: {}, Location: {}", request.caseId(), request.location());
+        
+        try {
+            ReportResponse response = reportService.create(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            log.error("신고 접수 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("신고 접수 중 서버 오류", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
-    @GetMapping("/{reportId}") 
-    public ApiResponse<ReportDetailResponse> getReport(@PathVariable Long reportId) { 
-        ReportDetailResponse response = service.getDetail(reportId);
-        return ApiResponse.ok(response); 
+    @GetMapping
+    public ResponseEntity<List<ReportResponse>> getAllReports() {
+        try {
+            List<ReportResponse> reports = reportService.findAll();
+            return ResponseEntity.ok(reports);
+        } catch (Exception e) {
+            log.error("신고 목록 조회 중 서버 오류", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
-    @GetMapping 
-    public ApiResponse<List<ReportResponse>> list() { 
-        return ApiResponse.ok(service.list()); 
-    }
-    
-    // TODO: 실제 JWT 파싱 로직 구현 필요
-    private String extractPhoneHashFromToken(String authorization) {
-        // Bearer 토큰에서 실제 JWT 파싱하여 전화번호 해시 추출
-        // 임시로 고정값 반환
-        return "temp_phone_hash_" + System.currentTimeMillis();
+    @GetMapping("/{id}")
+    public ResponseEntity<ReportResponse> getReportById(@PathVariable Long id) {
+        try {
+            ReportResponse response = reportService.findById(id);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("신고 조회 실패: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("신고 조회 중 서버 오류", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

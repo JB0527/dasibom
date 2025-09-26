@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import site.dasibom.domain.missingcase.entity.MissingCase;
+import site.dasibom.domain.common.enums.CaseStatus;
 
 import java.util.List;
 
@@ -13,6 +14,11 @@ public interface MissingCaseRepository extends JpaRepository<MissingCase, Long> 
      * 발생일자와 이름으로 실종자 케이스 검색 (Safe182 API 중복 체크용)
      */
     MissingCase findByOccrdeAndNm(String occrde, String nm);
+    
+    /**
+     * 케이스 상태로 실종자 케이스 검색 (자동 종료 처리용)
+     */
+    List<MissingCase> findByCaseStatus(CaseStatus caseStatus);
     
     /**
      * 이름으로 실종자 케이스 검색
