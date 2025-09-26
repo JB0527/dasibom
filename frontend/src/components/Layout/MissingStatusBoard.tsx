@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTodayFormatted } from '../../utils/dateUtils';
 import { getMissingStatusData, type MissingStatusData } from '../../utils/missingPersonUtils';
+import { useStatusBoard } from '../../hooks/useOptimizedMissingPerson';
 
 interface MissingStatusBoardProps {
   date?: string;
@@ -8,6 +9,7 @@ interface MissingStatusBoardProps {
   resolvedCount?: number;
   reportCount?: number;
   isMobile?: boolean;
+  missingPersons?: any[]; // 외부에서 데이터를 전달받음
 }
 
 const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
@@ -17,17 +19,20 @@ const MissingStatusBoard: React.FC<MissingStatusBoardProps> = ({
   reportCount,
   isMobile = false
 }) => {
+  const { missingPersons, isLoading, error } = useStatusBoard();
   const [statusData, setStatusData] = useState<MissingStatusData>({
     receivedCount: 0,
     resolvedCount: 0,
     reportCount: 0
   });
 
-  // 컴포넌트 마운트 시 더미 데이터 로드
+  // 상태 데이터 계산
   useEffect(() => {
-    const data = getMissingStatusData();
-    setStatusData(data);
-  }, []);
+    if (missingPersons.length > 0) {
+      const data = getMissingStatusData(missingPersons);
+      setStatusData(data);
+    }
+  }, [missingPersons]);
 
   // Props가 전달되면 Props 사용, 아니면 상태 데이터 사용
   const finalDate = date || getTodayFormatted();

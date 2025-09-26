@@ -1,54 +1,64 @@
 // 도보 예측 범위 컴포넌트
 import React, { useEffect, useRef } from 'react';
 import { Map, Circle, CustomOverlayMap } from 'react-kakao-maps-sdk';
-import type { MissingPerson } from '../../types/missingPerson';
+import type { MissingPersonMapItem } from '../../types/missingPerson';
 import { getDynamicWalkingDistance } from '../../utils/timeUtils';
+import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface WalkingRangeMapProps {
-  person: MissingPerson;
+  person: MissingPersonMapItem;
   className?: string;
 }
 
 const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "" }) => {
   const mapRef = useRef<kakao.maps.Map>(null);
   const [walkingDistance, setWalkingDistance] = React.useState(
-    getDynamicWalkingDistance(person.age, person.lastSeenDate)
+    getDynamicWalkingDistance(person.occurDate)
   );
+  // createdAt 기준으로 경과 시간 계산
   const [elapsedHours, setElapsedHours] = React.useState(
-    Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60))
+    Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60))
   );
   const [isUserInteracting, setIsUserInteracting] = React.useState(false);
   
-  // 실시간으로 도보 범위와 경과 시간 업데이트 (1초마다)
+  // 실시간으로 도보 범위와 경과 시간 업데이트 (1초마다) - createdAt 기준
   useEffect(() => {
+    // 즉시 한 번 계산
+    setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+    setElapsedHours(Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60)));
+    
     const interval = setInterval(() => {
-      setWalkingDistance(getDynamicWalkingDistance(person.age, person.lastSeenDate));
-      setElapsedHours(Math.floor((new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60)));
+      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
+      setElapsedHours(Math.floor((new Date().getTime() - new Date(person.createdAt).getTime()) / (1000 * 60 * 60)));
     }, 1000); // 1초마다 업데이트
 
     return () => clearInterval(interval);
-  }, [person.age, person.lastSeenDate]);
+  }, [person.createdAt, person.occurDate]);
 
   const radiusText = `${(walkingDistance / 1000).toFixed(1)}km`;
   const areaText = `${(Math.PI * walkingDistance * walkingDistance / 1000000).toFixed(1)}km²`;
 
   // 초기 지도 설정 (한 번만 실행)
   useEffect(() => {
-    if (mapRef.current && person.coordinates && !isUserInteracting) {
-      // 기존 지도에서 받은 실종 장소 좌표 사용
-      const center = new window.kakao.maps.LatLng(
-        person.coordinates.lat, 
-        person.coordinates.lng
-      );
-      mapRef.current.setCenter(center);
-      
-      // 도보 범위가 잘 보이도록 줌 레벨 조정 (나이 기반)
-      const zoomLevel = walkingDistance > 5000 ? 8 : 
-                       walkingDistance > 3000 ? 9 : 
-                       walkingDistance > 2000 ? 10 : 11;
-      mapRef.current.setLevel(zoomLevel);
+    if (mapRef.current && person.point && !isUserInteracting && window.kakao && window.kakao.maps && window.kakao.maps.LatLng && typeof window.kakao.maps.LatLng === 'function') {
+      try {
+        // 새로운 API의 point 좌표 사용
+        const center = new window.kakao.maps.LatLng(
+          person.point.lat, 
+          person.point.lon
+        );
+        mapRef.current.setCenter(center);
+        
+        // 도보 범위가 잘 보이도록 줌 레벨 조정
+        const zoomLevel = walkingDistance > 5000 ? 8 : 
+                         walkingDistance > 3000 ? 9 : 
+                         walkingDistance > 2000 ? 10 : 11;
+        mapRef.current.setLevel(zoomLevel);
+      } catch (error) {
+        console.error('WalkingRange LatLng 생성 실패:', error);
+      }
     }
-  }, [person.coordinates]); // walkingDistance 의존성 제거
+  }, [person.point]); // walkingDistance 의존성 제거
 
   // 사용자 상호작용 감지
   useEffect(() => {
@@ -83,49 +93,64 @@ const WalkingRangeMap: React.FC<WalkingRangeMapProps> = ({ person, className = "
       
       {/* 미니 지도 */}
       <div className="h-48 w-full">
-        <Map
-          center={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
-          style={{ width: '100%', height: '100%' }}
-          level={walkingDistance > 5000 ? 8 : 
-                 walkingDistance > 3000 ? 9 : 
-                 walkingDistance > 2000 ? 10 : 11}
-          onCreate={(map) => {
-            mapRef.current = map;
-          }}
-        >
-          {/* 실종자 마커 (실제 지도와 동일한 스타일) */}
-          <CustomOverlayMap
-            position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
-            yAnchor={1}
+        {person.point ? (
+          <Map
+            center={{ lat: person.point.lat, lng: person.point.lon }}
+            style={{ width: '100%', height: '100%' }}
+            level={walkingDistance > 5000 ? 8 : 
+                   walkingDistance > 3000 ? 9 : 
+                   walkingDistance > 2000 ? 10 : 11}
+            onCreate={(map) => {
+              mapRef.current = map;
+            }}
+          >
+            {/* 실종자 마커 (실제 지도와 동일한 스타일) */}
+            <CustomOverlayMap
+              position={{ lat: person.point.lat, lng: person.point.lon }}
+              yAnchor={1}
             xAnchor={0.5}
           >
             <div className="relative">
               {/* 프로필 이미지 */}
               <img
-                src={person.photo || `https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+                src={person.photoUrl || `https://via.placeholder.com/40x40/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
                 alt={person.name}
                 className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-lg"
               />
               
               {/* 실시간 경과 시간 표시 (프로필 이미지 아래) */}
-              <div className="mt-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full text-center font-mono shadow-md">
-                {elapsedHours}h
+              <div className="mt-1 flex justify-center">
+                <ElapsedTimeBadge 
+                  elapsedTime={{ 
+                    hours: elapsedHours, 
+                    minutes: 0, 
+                    seconds: 0, 
+                    totalSeconds: elapsedHours * 3600, 
+                    formatted: `${elapsedHours}h` 
+                  }} 
+                  variant="compact" 
+                />
               </div>
             </div>
           </CustomOverlayMap>
           
-          {/* 도보 범위 원 (나이 기반) */}
-          <Circle
-            center={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
-            radius={walkingDistance}
-            strokeWeight={2}
-            strokeColor="#3b82f6"
-            strokeOpacity={0.8}
-            strokeStyle="solid"
-            fillColor="#3b82f6"
-            fillOpacity={0.1}
-          />
-        </Map>
+            {/* 도보 범위 원 */}
+            <Circle
+              center={{ lat: person.point.lat, lng: person.point.lon }}
+              radius={walkingDistance}
+              strokeWeight={2}
+              strokeColor="#3b82f6"
+              strokeOpacity={0.8}
+              strokeStyle="solid"
+              fillColor="#3b82f6"
+              fillOpacity={0.1}
+            />
+          </Map>
+        ) : (
+          <div className="h-48 w-full flex items-center justify-center bg-gray-100 rounded-lg">
+            <span className="text-gray-500">위치 정보가 없습니다</span>
+          </div>
+        )}
       </div>
       
       {/* 범례 */}

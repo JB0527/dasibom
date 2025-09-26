@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo, useCallback } from 'react';
 import { Map, CustomOverlayMap, MarkerClusterer, Circle } from 'react-kakao-maps-sdk';
 import PersonInfoModal from '../Modal/PersonInfoModal';
 import MissingPersonMarker from './MissingPersonMarker';
@@ -8,23 +8,15 @@ import { useMarkerInteraction } from '../../hooks/useMarkerInteraction';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { useZoomLevel } from '../../hooks/useZoomLevel';
 import { useClusterManager } from '../../hooks/useClusterManager';
-import { mockMissingPersons } from '../../data/mockMissingPersons';
+import { useMapMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import { getDynamicWalkingDistance } from '../../utils/timeUtils';
 import { ZOOM_LEVELS, CLUSTER_STYLES } from '../../constants/mapConstants';
 
-// 24시간 이내 실종자만 필터링하는 함수
-const filterRecentMissingPersons = (persons: typeof mockMissingPersons) => {
-  const now = new Date();
-  return persons.filter(person => {
-    const missingDate = new Date(person.lastSeenDate);
-    const hoursElapsed = (now.getTime() - missingDate.getTime()) / (1000 * 60 * 60);
-    return hoursElapsed <= 24; // 24시간 이내만 표시
-  });
-};
-
-const MapContainer: React.FC = () => {
-  // 24시간 이내 실종자만 필터링
-  const recentMissingPersons = filterRecentMissingPersons(mockMissingPersons);
+const MapContainer: React.FC = memo(() => {
+  // 실종자 데이터 가져오기
+  const { missingPersons, isLoading, error, fetchMissingPersons } = useMapMissingPerson();
+  
+  // 컴포넌트 마운트 시 데이터 로드 (useOptimizedMissingPerson에서 이미 처리됨)
   
   // 커스텀 훅 사용
   const { isKakaoLoaded, isClusterLoaded, mapInstance, setMapInstance } = useKakaoMap();
@@ -35,7 +27,7 @@ const MapContainer: React.FC = () => {
     selectedPersonElapsedTime,
     handleMarkerClick,
     handleCloseModal
-  } = useMarkerInteraction(mapInstance, recentMissingPersons);
+  } = useMarkerInteraction(mapInstance, missingPersons);
   
   // 사용자 위치 훅
   const { userLocation, isLoading: isLocationLoading, error: locationError, requestLocation } = useUserLocation();
@@ -48,30 +40,63 @@ const MapContainer: React.FC = () => {
     currentZoomLevel,
   });
 
-  // 사용자 위치가 변경되면 지도 중심을 이동
+  // 마커 클릭 핸들러를 useCallback으로 안정화
+  const handleMarkerClickCallback = useCallback((person: any) => {
+    handleMarkerClick(person);
+  }, [handleMarkerClick]);
+
+  // 사용자 위치가 변경되면 지도 중심을 이동 (한 번만 실행)
   useEffect(() => {
-    if (userLocation && mapInstance) {
-      const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
-      mapInstance.setCenter(moveLatLon);
-      mapInstance.setLevel(ZOOM_LEVELS.STREET_VIEW); // 거리 단위 뷰로 설정
+    if (userLocation && mapInstance && window.kakao && window.kakao.maps && window.kakao.maps.LatLng && typeof window.kakao.maps.LatLng === 'function') {
+      try {
+        const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lon);
+        mapInstance.setCenter(moveLatLon);
+        mapInstance.setLevel(ZOOM_LEVELS.STREET_VIEW); // 거리 단위 뷰로 설정
+      } catch (error) {
+        console.error('LatLng 생성 실패:', error);
+      }
     }
-  }, [userLocation, mapInstance]);
+  }, [userLocation?.lat, userLocation?.lon, mapInstance]); // 정확한 의존성만 사용
 
   // 로딩 상태
-  if (!isKakaoLoaded) {
+  if (!isKakaoLoaded || isLoading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">지도를 불러오는 중...</p>
-          <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
+          <p className="text-gray-600">{isLoading ? '실종자 정보를 불러오는 중...' : '지도를 불러오는 중...'}</p>
+          <p className="text-sm text-gray-400 mt-2">
+            {isLoading ? '주소를 좌표로 변환하고 있습니다' : '잠시만 기다려주세요'}
+          </p>
         </div>
       </div>
     );
   }
 
+  // 에러 상태 - 지도는 표시하되 에러 메시지만 표시
+  const showErrorAlert = error && (
+    <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg">
+      <div className="flex items-center">
+        <div className="text-red-500 text-xl mr-3">⚠️</div>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-red-800">데이터 로드 실패</h3>
+          <p className="text-xs text-red-600 mt-1">{error}</p>
+        </div>
+        <button
+          onClick={fetchMissingPersons}
+          className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+        >
+          다시 시도
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative w-full h-full">
+      {/* 에러 알림 */}
+      {showErrorAlert}
+      
       {/* 카카오맵 */}
       <Map
         center={{ lat: 37.5665, lng: 126.9780 }} // 서울 중심
@@ -82,13 +107,13 @@ const MapContainer: React.FC = () => {
         {/* 사용자 현재 위치 마커 */}
         {userLocation && (
           <CustomOverlayMap
-            position={{ lat: userLocation.lat, lng: userLocation.lng }}
+            position={{ lat: userLocation.lat, lng: userLocation.lon }}
             yAnchor={0.5}
             xAnchor={0.5}
           >
             <UserLocationMarker
               lat={userLocation.lat}
-              lng={userLocation.lng}
+              lon={userLocation.lon}
               accuracy={userLocation.accuracy}
             />
           </CustomOverlayMap>
@@ -104,18 +129,18 @@ const MapContainer: React.FC = () => {
             disableClickZoom={false}
             styles={CLUSTER_STYLES}
           >
-            {recentMissingPersons.map((person) => (
+            {missingPersons.filter(person => person.point).map((person) => (
               <CustomOverlayMap
-                key={person.id}
-                position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
+                key={`cluster-${person.id}`}
+                position={{ lat: person.point!.lat, lng: person.point!.lon }}
                 yAnchor={1}
                 xAnchor={0.5}
               >
                 <div
                   onClick={() => {
                     // 클러스터링된 마커 클릭 시 해당 위치로 줌인
-                    if (mapInstance) {
-                      const moveLatLon = new window.kakao.maps.LatLng(person.coordinates.lat, person.coordinates.lng);
+                    if (mapInstance && window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
+                      const moveLatLon = new window.kakao.maps.LatLng(person.point!.lat, person.point!.lon);
                       mapInstance.setCenter(moveLatLon);
                       mapInstance.setLevel(ZOOM_LEVELS.DETAIL_VIEW);
                     }
@@ -133,17 +158,17 @@ const MapContainer: React.FC = () => {
           </MarkerClusterer>
         ) : (
           // 개별 마커 모드: 커스텀 마커 사용
-          recentMissingPersons.map((person) => (
+          missingPersons.filter(person => person.point).map((person) => (
             <CustomOverlayMap
-              key={person.id}
-              position={{ lat: person.coordinates.lat, lng: person.coordinates.lng }}
+              key={`marker-${person.id}`}
+              position={{ lat: person.point!.lat, lng: person.point!.lon }}
               yAnchor={1}
               xAnchor={0.5}
             >
               <MissingPersonMarker
                 person={person}
-                onClick={() => handleMarkerClick(person)}
-                isSelected={selectedMarkerId === person.id}
+                onClick={() => handleMarkerClickCallback(person)}
+                isSelected={selectedMarkerId === person.id.toString()}
               />
             </CustomOverlayMap>
           ))
@@ -152,8 +177,8 @@ const MapContainer: React.FC = () => {
         {/* 선택된 실종자의 도보 범위 원 (실제 지리적 거리) */}
         {selectedPerson && (
           <Circle
-            center={{ lat: selectedPerson.coordinates.lat, lng: selectedPerson.coordinates.lng }}
-            radius={getDynamicWalkingDistance(selectedPerson.age, selectedPerson.lastSeenDate)}
+            center={{ lat: selectedPerson.point.lat, lng: selectedPerson.point.lon }}
+            radius={getDynamicWalkingDistance(selectedPerson.occurDate)}
             strokeWeight={2}
             strokeColor="#3b82f6"
             strokeOpacity={0.8}
@@ -210,15 +235,18 @@ const MapContainer: React.FC = () => {
         )}
       </div>
 
-      {/* 실종자 정보 모달 */}
-      <PersonInfoModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        person={selectedPerson}
-        elapsedTime={selectedPersonElapsedTime}
-      />
+      {/* 실종자 정보 모달 - 열릴 때만 렌더링 */}
+      {isModalOpen && (
+        <PersonInfoModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          person={selectedPerson}
+        />
+      )}
     </div>
   );
-};
+});
+
+MapContainer.displayName = 'MapContainer';
 
 export default MapContainer;

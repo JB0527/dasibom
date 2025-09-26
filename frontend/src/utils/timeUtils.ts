@@ -9,12 +9,23 @@ export interface TimeElapsed {
 }
 
 /**
+ * YYYYMMDD 형식의 날짜를 Date 객체로 변환
+ * 시간 정보가 없으므로 정오(12:00:00)로 설정하여 더 현실적인 경과시간 계산
+ */
+export const parseOccurDate = (occurDate: string): Date => {
+  const year = parseInt(occurDate.substring(0, 4));
+  const month = parseInt(occurDate.substring(4, 6)) - 1; // 월은 0부터 시작
+  const day = parseInt(occurDate.substring(6, 8));
+  return new Date(year, month, day, 12, 0, 0); // 정오(12:00:00)로 설정
+};
+
+/**
  * 실종 시간으로부터 경과된 시간을 계산
- * @param lastSeenDate 실종일시 (ISO 8601 형식: YYYY-MM-DDTHH:mm:ss)
+ * @param occurDate 실종일시 (YYYYMMDD 형식)
  * @returns 경과된 시간 정보
  */
-export const calculateElapsedTime = (lastSeenDate: string): TimeElapsed => {
-  const lastSeen = new Date(lastSeenDate);
+export const calculateElapsedTime = (occurDate: string): TimeElapsed => {
+  const lastSeen = parseOccurDate(occurDate);
   const now = new Date();
   
   const diffMs = now.getTime() - lastSeen.getTime();
@@ -23,12 +34,99 @@ export const calculateElapsedTime = (lastSeenDate: string): TimeElapsed => {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   
+  // 24시간(86400초) 초과 시 월,일 형식으로 표시
+  let formatted: string;
+  if (totalSeconds >= 86400) {
+    const days = Math.floor(totalSeconds / 86400);
+    const remainingHours = Math.floor((totalSeconds % 86400) / 3600);
+    
+    if (days >= 30) {
+      // 30일 이상은 월,일로 표시 (짧게)
+      const months = Math.floor(days / 30);
+      const remainingDays = days % 30;
+      formatted = `${months}M ${remainingDays}D`;
+    } else {
+      // 1일 이상 30일 미만은 일,시간으로 표시 (짧게)
+      formatted = `${days}D ${remainingHours}H`;
+    }
+  } else {
+    // 24시간 미만은 시:분:초 형식
+    formatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  
   return {
     hours,
     minutes,
     seconds,
     totalSeconds,
-    formatted: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    formatted
+  };
+};
+
+/**
+ * 데이터 생성 시간으로부터 경과된 시간을 계산 (createdAt 사용)
+ * @param createdAt 데이터 생성 시간 (ISO 8601 형식)
+ * @returns 경과된 시간 정보
+ */
+export const calculateElapsedTimeFromCreated = (createdAt: string): TimeElapsed => {
+  const createdTime = new Date(createdAt);
+  const now = new Date();
+  
+  // 유효하지 않은 날짜 처리
+  if (isNaN(createdTime.getTime())) {
+    return {
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalSeconds: 0,
+      formatted: '00:00:00'
+    };
+  }
+  
+  const diffMs = now.getTime() - createdTime.getTime();
+  
+  // 미래 시간 처리 (음수 방지)
+  if (diffMs < 0) {
+    return {
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalSeconds: 0,
+      formatted: '00:00:00'
+    };
+  }
+  
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  // 24시간(86400초) 초과 시 월,일 형식으로 표시
+  let formatted: string;
+  if (totalSeconds >= 86400) {
+    const days = Math.floor(totalSeconds / 86400);
+    const remainingHours = Math.floor((totalSeconds % 86400) / 3600);
+    
+    if (days >= 30) {
+      // 30일 이상은 월,일로 표시 (짧게)
+      const months = Math.floor(days / 30);
+      const remainingDays = days % 30;
+      formatted = `${months}M ${remainingDays}D`;
+    } else {
+      // 1일 이상 30일 미만은 일,시간으로 표시 (짧게)
+      formatted = `${days}D ${remainingHours}H`;
+    }
+  } else {
+    // 24시간 미만은 시:분:초 형식
+    formatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  
+  return {
+    hours,
+    minutes,
+    seconds,
+    totalSeconds,
+    formatted
   };
 };
 
@@ -79,26 +177,17 @@ export const getCircleSizeByAge = (age: number, mapLevel: number = 3): number =>
 };
 
 /**
- * 나이와 실종 경과 시간을 고려한 동적 도보 예측 거리 계산 (하이브리드 방식)
- * @param age 나이
- * @param lastSeenDate 실종일시
+ * 실종 경과 시간을 고려한 동적 도보 예측 거리 계산 (하이브리드 방식)
+ * @param occurDate 실종일시 (YYYYMMDD 형식)
  * @returns 동적 도보 예측 거리 (미터)
  */
-export const getDynamicWalkingDistance = (age: number, lastSeenDate: string): number => {
-  // 기본 나이별 도보 속도 (km/h)
-  let baseSpeed: number;
-  if (age < 10) baseSpeed = 2;      // 어린이: 2km/h
-  else if (age < 20) baseSpeed = 4; // 청소년: 4km/h
-  else if (age < 30) baseSpeed = 5; // 20대: 5km/h (가장 활발)
-  else if (age < 40) baseSpeed = 4.5; // 30대: 4.5km/h
-  else if (age < 50) baseSpeed = 3.5; // 40대: 3.5km/h
-  else if (age < 60) baseSpeed = 3;   // 50대: 3km/h
-  else if (age < 70) baseSpeed = 2.5; // 60대: 2.5km/h
-  else baseSpeed = 2;                 // 70대 이상: 2km/h
+export const getDynamicWalkingDistance = (occurDate: string): number => {
+  // 기본 도보 속도 (km/h) - 평균 성인 기준
+  const baseSpeed = 4; // 4km/h
 
   // 실종 경과 시간 계산 (시간 단위)
   const now = new Date();
-  const missingDate = new Date(lastSeenDate);
+  const missingDate = parseOccurDate(occurDate);
   const hoursElapsed = (now.getTime() - missingDate.getTime()) / (1000 * 60 * 60);
   
   // 최소 1시간, 최대 72시간(3일)으로 제한

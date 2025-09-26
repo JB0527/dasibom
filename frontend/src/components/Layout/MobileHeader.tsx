@@ -9,7 +9,6 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleMenuToggle = () => {
-    console.log('햄버거 메뉴 클릭됨, 현재 상태:', isMenuOpen);
     setIsMenuOpen(!isMenuOpen);
   };
 
@@ -18,10 +17,6 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick }) => {
     onMenuClick?.(menu);
   };
 
-  // 디버깅용 useEffect
-  useEffect(() => {
-    console.log('isMenuOpen 상태 변경됨:', isMenuOpen);
-  }, [isMenuOpen]);
 
   const menuItems = [
     { id: 'map', label: '실종 지도 페이지' },

@@ -1,34 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { calculateElapsedTime } from '../../utils/timeUtils';
-import type { MissingPerson } from '../../types/missingPerson';
+import React, { useState, useEffect, memo } from 'react';
+import { calculateElapsedTimeFromCreated } from '../../utils/timeUtils';
+import type { MissingPersonMapItem } from '../../types/missingPerson';
+import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface MissingPersonMarkerProps {
-  person: MissingPerson;
+  person: MissingPersonMapItem;
   onClick: () => void;
   isSelected?: boolean;
 }
 
-const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
+const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = memo(({
   person,
   onClick,
   isSelected = false
 }) => {
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.lastSeenDate));
+  // createdAt 기준으로 경과시간 계산 (생성된 시간 기준)
+  const [elapsedTime, setElapsedTime] = useState(
+    calculateElapsedTimeFromCreated(person.createdAt)
+  );
   
-  // 실시간 경과시간 업데이트 (1초마다)
+  // 실시간 경과시간 업데이트 (1초마다) - createdAt 기준
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
+      setElapsedTime(calculateElapsedTimeFromCreated(person.createdAt));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.lastSeenDate]);
+  }, [person.createdAt]);
 
-  // 나이와 실종 경과 시간을 고려한 동적 도보 거리 계산
-  // const dynamicWalkingDistance = getDynamicWalkingDistance(person.age, person.lastSeenDate);
 
-  // 기본 프로필 이미지
-  const defaultPhoto = 'https://via.placeholder.com/60x60/4F46E5/FFFFFF?text=' + person.name.charAt(0);
+  // 기본 프로필 이미지 (더 예쁘게)
+  const defaultPhoto = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+    <svg width="60" height="60" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <rect width="60" height="60" rx="30" fill="url(#grad)"/>
+      <text x="30" y="38" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold">${person.name.charAt(0)}</text>
+    </svg>
+  `)}`;
   
   return (
     <div className="relative" style={{ zIndex: isSelected ? 1000 : 100 }}>
@@ -41,7 +54,7 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
         {/* 프로필 이미지 */}
         <div className="relative">
           <img
-            src={person.photo || defaultPhoto}
+            src={person.photoUrl || defaultPhoto}
             alt={person.name}
             className={`w-12 h-12 rounded-full border-3 object-cover shadow-lg ${
               isSelected ? 'border-blue-500' : 'border-white'
@@ -50,8 +63,8 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
         </div>
         
         {/* 실시간 경과 시간 표시 (프로필 이미지 아래) */}
-        <div className="mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full text-center font-mono shadow-md">
-          {elapsedTime.formatted}
+        <div className="mt-1 flex justify-center">
+          <ElapsedTimeBadge elapsedTime={elapsedTime} variant="compact" />
         </div>
         
         {/* 선택된 마커 강조 */}
@@ -64,6 +77,8 @@ const MissingPersonMarker: React.FC<MissingPersonMarkerProps> = ({
       </div>
     </div>
   );
-};
+});
+
+MissingPersonMarker.displayName = 'MissingPersonMarker';
 
 export default MissingPersonMarker;

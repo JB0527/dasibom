@@ -1,32 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
-import type { MissingPerson } from '../../types/missingPerson';
+import { calculateElapsedTimeFromCreated, getDynamicWalkingDistance } from '../../utils/timeUtils';
+import type { MissingPersonListItem } from '../../types/missingPerson';
+import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface MissingPersonCardProps {
-  person: MissingPerson;
+  person: MissingPersonListItem;
 }
 
 const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.lastSeenDate));
+  
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTimeFromCreated(person.createdAt));
   const [walkingDistance, setWalkingDistance] = useState(
-    getDynamicWalkingDistance(person.age, person.lastSeenDate)
+    getDynamicWalkingDistance(person.occurDate)
   );
 
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTime(person.lastSeenDate));
-      setWalkingDistance(getDynamicWalkingDistance(person.age, person.lastSeenDate));
+      setElapsedTime(calculateElapsedTimeFromCreated(person.createdAt));
+      setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.lastSeenDate, person.age]);
+  }, [person.createdAt, person.occurDate]);
+
+  // 컴포넌트 마운트 시 상세 정보 가져오기
 
   // 경과 시간에 따른 상태 표시
   const getStatusInfo = () => {
-    const hoursElapsed = (new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60);
+    const hoursElapsed = elapsedTime.hours;
     
     if (hoursElapsed <= 6) {
       return { label: '긴급', color: 'bg-red-100 text-red-800 border-red-200' };
@@ -46,7 +50,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
         {/* 왼쪽 프로필 사진 영역 */}
         <div className="relative flex-shrink-0 w-20 h-20 m-3">
           <img
-            src={person.photo || `https://via.placeholder.com/80x80/4F46E5/FFFFFF?text=${person.name.charAt(0)}`}
+            src={person.photoUrl}
             alt={person.name}
             className="w-full h-full object-cover rounded-lg"
           />
@@ -57,9 +61,7 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           </div>
           {/* 경과시간 - 프로필 이미지 밑에 */}
           <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-            <span className="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs font-mono shadow-md">
-              {elapsedTime.formatted}
-            </span>
+            <ElapsedTimeBadge elapsedTime={elapsedTime} variant="compact" />
           </div>
         </div>
         
@@ -69,47 +71,36 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           <div>
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-gray-900">
-                {person.name} <span className="text-sm text-gray-500 font-normal">({person.age}세)</span>
+                {person.name}
+                <span className="text-sm text-gray-500 font-normal ml-2">
+                  ({person.age || person.ageNow || 'N/A'}세, {person.sexCode === '1' ? '남성' : person.sexCode === '2' ? '여성' : 'N/A'})
+                </span>
               </h3>
             </div>
             
             {/* 기본 정보 - 2열로 정리 */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
               <div>
-                <span className="text-gray-500">국적:</span>
-                <span className="ml-1 text-gray-900">{person.nationality}</span>
+                <span className="text-gray-500">상태:</span>
+                <span className="ml-1 text-gray-900">{person.status === 'OPEN' ? '진행중' : '해제'}</span>
               </div>
               <div>
-                <span className="text-gray-500">신체:</span>
-                <span className="ml-1 text-gray-900">{person.height}cm, {person.weight}kg</span>
-              </div>
-              <div>
-                <span className="text-gray-500">체형:</span>
-                <span className="ml-1 text-gray-900">{person.build}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">얼굴형:</span>
-                <span className="ml-1 text-gray-900">{person.faceShape}</span>
+                <span className="text-gray-500">대상코드:</span>
+                <span className="ml-1 text-gray-900">{person.targetCode || 'N/A'}</span>
               </div>
             </div>
             
             {/* 실종 정보 */}
             <div className="border-t pt-2 mb-3">
               <div className="text-sm mb-1">
-                <span className="text-gray-500">실종일시:</span>
+                <span className="text-gray-500">발생일:</span>
                 <span className="ml-1 text-gray-900">
-                  {new Date(person.lastSeenDate).toLocaleString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  })}
+                  {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
                 </span>
               </div>
               <div className="text-sm mb-1">
-                <span className="text-gray-500">실종장소:</span>
-                <span className="ml-1 text-gray-900">{person.lastSeenLocation}</span>
+                <span className="text-gray-500">발생장소:</span>
+                <span className="ml-1 text-gray-900">{person.occurAddress || 'N/A'}</span>
               </div>
               <div className="text-sm">
                 <span className="text-gray-500">예상범위:</span>
@@ -121,14 +112,16 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
           {/* 하단 버튼 - 오른쪽 정렬 */}
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => navigate(`/report/${person.id}`)}
+              onClick={() => {
+                navigate(`/report/${person.id}`);
+              }}
               className="bg-blue-500 text-white py-1.5 px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
             >
               신고하기
             </button>
             <button
               onClick={() => {
-                const shareText = `${person.name} 실종자 정보\n나이: ${person.age}세\n실종일시: ${new Date(person.lastSeenDate).toLocaleString('ko-KR')}\n실종장소: ${person.lastSeenLocation}`;
+                const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n발생장소: ${person.occurAddress || 'N/A'}`;
                 
                 if (navigator.share) {
                   navigator.share({

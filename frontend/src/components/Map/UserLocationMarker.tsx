@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface UserLocationMarkerProps {
   lat: number;
-  lng: number;
+  lon: number;
   accuracy?: number;
 }
 
-const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
+const UserLocationMarker: React.FC<UserLocationMarkerProps> = memo(({ 
   accuracy 
 }) => {
   return (
@@ -46,6 +46,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       </div>
     </div>
   );
-};
+});
+
+UserLocationMarker.displayName = 'UserLocationMarker';
 
 export default UserLocationMarker;

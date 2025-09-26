@@ -1,39 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useMissingPerson } from '../../hooks/useMissingPerson';
+import React, { useState} from 'react';
+import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
 import { MissingPersonCard } from '../../components/MissingPerson/MissingPersonCard';
-import type { MissingPerson } from '../../types/missingPerson';
 
 const MissingPersonListPage: React.FC = () => {
-  const { fetchMissingPersons } = useMissingPerson();
-  const [missingPersons, setMissingPersons] = useState<MissingPerson[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { allPersons, isLoading } = useListMissingPerson();
   const [filter, setFilter] = useState<'all' | 'recent' | 'old'>('all');
 
-  useEffect(() => {
-    const loadMissingPersons = async () => {
-      try {
-        const persons = await fetchMissingPersons();
-        // 실종시간 최신순으로 정렬 (최근 실종일시가 먼저)
-        const sortedPersons = persons.sort((a, b) => {
-          const dateA = new Date(a.lastSeenDate).getTime();
-          const dateB = new Date(b.lastSeenDate).getTime();
-          return dateB - dateA; // 내림차순 (최신순)
-        });
-        setMissingPersons(sortedPersons);
-      } catch (error) {
-        console.error('실종자 목록 로드 실패:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    loadMissingPersons();
-  }, [fetchMissingPersons]);
-
+  // 페이지네이션 제거됨 - 모든 데이터를 한 번에 로드
 
   // 필터링된 실종자 목록
-  const filteredMissingPersons = missingPersons.filter(person => {
-    const hoursElapsed = (new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60);
+  const filteredMissingPersons = (allPersons || []).filter(person => {
+    const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
+    const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
     
     switch (filter) {
       case 'recent':
@@ -44,6 +23,8 @@ const MissingPersonListPage: React.FC = () => {
         return true; // 'all'
     }
   });
+
+  // 페이지네이션 제거됨
 
   if (isLoading) {
     return (
@@ -73,7 +54,7 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                전체 ({missingPersons.length})
+                전체 ({(allPersons || []).length})
               </button>
               <button
                 onClick={() => setFilter('recent')}
@@ -83,8 +64,9 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                24h 이내 ({missingPersons.filter(person => {
-                  const hoursElapsed = (new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60);
+                24h 이내 ({(allPersons || []).filter(person => {
+                  const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
+                  const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
                   return hoursElapsed <= 24;
                 }).length})
               </button>
@@ -96,8 +78,9 @@ const MissingPersonListPage: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                24h 초과 ({missingPersons.filter(person => {
-                  const hoursElapsed = (new Date().getTime() - new Date(person.lastSeenDate).getTime()) / (1000 * 60 * 60);
+                24h 초과 ({(allPersons || []).filter(person => {
+                  const occurDate = new Date(person.occurDate.substring(0, 4) + '-' + person.occurDate.substring(4, 6) + '-' + person.occurDate.substring(6, 8));
+                  const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
                   return hoursElapsed > 24;
                 }).length})
               </button>
@@ -131,6 +114,8 @@ const MissingPersonListPage: React.FC = () => {
             </p>
           </div>
         )}
+
+        {/* 페이지네이션 제거됨 - 모든 데이터를 한 번에 표시 */}
       </div>
     </div>
   );

@@ -107,7 +107,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({ isOpen, onClose, children, title 
       {/* Desktop Modal */}
       <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-4" onClick={onClose}>
         <div 
-          className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden"
+          className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {title && (
@@ -124,7 +124,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({ isOpen, onClose, children, title 
               <h2 className="text-lg font-semibold flex-1 text-center mr-8">{title}</h2>
             </div>
           )}
-          <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
             {children}
           </div>
         </div>

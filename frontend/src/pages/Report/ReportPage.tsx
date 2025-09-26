@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReportForm } from '../../components/Report/ReportForm';
-import { useMissingPerson } from '../../hooks/useMissingPerson';
-import type { MissingPerson } from '../../types/missingPerson';
+import { useListMissingPerson } from '../../hooks/useOptimizedMissingPerson';
+import type { MissingPersonDetail } from '../../types/missingPerson';
 
 interface ReportPageProps {
   missingPersonId?: string;
@@ -11,8 +11,8 @@ interface ReportPageProps {
 
 export const ReportPage: React.FC<ReportPageProps> = ({ missingPersonId }) => {
   const navigate = useNavigate();
-  const { getMissingPersonById } = useMissingPerson();
-  const [missingPerson, setMissingPerson] = useState<MissingPerson | null>(null);
+  const { getCaseDetail } = useListMissingPerson();
+  const [missingPerson, setMissingPerson] = useState<MissingPersonDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -20,17 +20,19 @@ export const ReportPage: React.FC<ReportPageProps> = ({ missingPersonId }) => {
     const loadMissingPerson = async () => {
       if (missingPersonId) {
         try {
-          const person = await getMissingPersonById(missingPersonId);
+          const person = await getCaseDetail(parseInt(missingPersonId));
           setMissingPerson(person);
         } catch (error) {
           console.error('실종자 정보 로드 실패:', error);
         }
+      } else {
+        console.warn('missingPersonId가 없습니다');
       }
       setIsLoading(false);
     };
 
     loadMissingPerson();
-  }, [missingPersonId, getMissingPersonById]);
+  }, [missingPersonId, getCaseDetail]);
 
   const handleSuccess = () => {
     setShowSuccess(true);
