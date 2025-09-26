@@ -4,15 +4,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import site.dasibom.domain.report.dto.CreateReportRequest;
 import site.dasibom.domain.report.dto.ReportResponse;
 import site.dasibom.domain.report.entity.Report;
 import site.dasibom.domain.report.repository.ReportRepository;
 import site.dasibom.domain.missingcase.repository.MissingCaseRepository;
 import site.dasibom.domain.missingcase.entity.MissingCase;
+import site.dasibom.global.service.S3Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Arrays;
 
 @Slf4j
 @Service
@@ -22,6 +25,7 @@ public class ReportService {
     
     private final ReportRepository reportRepository;
     private final MissingCaseRepository missingCaseRepository;
+    private final S3Service s3Service;
     
     @Transactional
     public ReportResponse create(CreateReportRequest request) {
@@ -58,5 +62,21 @@ public class ReportService {
         Report report = reportRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("제보를 찾을 수 없습니다: " + id));
         return ReportResponse.from(report);
+    }
+
+    /**
+     * 첨부파일 업로드
+     */
+    public String uploadAttachment(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return s3Service.uploadFiles(Arrays.asList(file), "reports");
+        } catch (Exception e) {
+            log.error("첨부파일 업로드 실패: {}", file.getOriginalFilename(), e);
+            throw new RuntimeException("첨부파일 업로드에 실패했습니다: " + e.getMessage(), e);
+        }
     }
 }

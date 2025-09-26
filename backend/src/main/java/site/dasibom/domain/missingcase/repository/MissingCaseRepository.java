@@ -13,7 +13,7 @@ public interface MissingCaseRepository extends JpaRepository<MissingCase, Long> 
     /**
      * 발생일자와 이름으로 실종자 케이스 검색 (Safe182 API 중복 체크용)
      */
-    MissingCase findByOccrdeAndNm(String occrde, String nm);
+    List<MissingCase> findByOccrdeAndNm(String occrde, String nm);
     
     /**
      * 케이스 상태로 실종자 케이스 검색 (자동 종료 처리용)

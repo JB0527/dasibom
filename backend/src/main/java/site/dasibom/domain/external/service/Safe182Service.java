@@ -156,11 +156,12 @@ public class Safe182Service {
      */
     private MissingCase saveOrUpdateMissingCase(MissingCase missingCase) {
         // 발생일자와 이름으로 기존 케이스 검색
-        MissingCase existingCase = missingCaseRepository
+        List<MissingCase> existingCases = missingCaseRepository
             .findByOccrdeAndNm(missingCase.getOccrde(), missingCase.getNm());
-        
-        if (existingCase != null) {
-            // 기존 케이스 업데이트
+
+        if (!existingCases.isEmpty()) {
+            // 첫 번째 케이스 업데이트 (중복이 있을 경우)
+            MissingCase existingCase = existingCases.get(0);
             updateExistingCase(existingCase, missingCase);
             log.debug("기존 실종자 케이스 업데이트: {} ({})", missingCase.getNm(), missingCase.getOccrde());
             return missingCaseRepository.save(existingCase);
