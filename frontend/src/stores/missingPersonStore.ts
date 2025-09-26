@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 import { missingPersonApi } from '../api/missingPerson';
 import { geocodeAddresses, cleanAddress } from '../utils/geocodingUtils';
 import type { MissingPersonListItem, MissingPersonMapItem } from '../types/missingPerson';
+import { filterPersonsForMap } from '../utils/missingPersonUtils';
 
 interface MissingPersonState {
   // 데이터
@@ -106,20 +107,10 @@ export const useMissingPersonStore = create<MissingPersonState>()(
             await get().fetchAllPersons();
           }
           
-          // 최신 상태에서 allPersons를 직접 필터링
+          // 최신 상태에서 allPersons를 가져와 지도 표시 기준으로 필터링
           const currentState = get();
           const { allPersons } = currentState;
-          
-          // 24시간 이내 실종자 직접 필터링
-          const recentPersons = allPersons.filter(person => {
-            const occurDate = new Date(
-              person.occurDate.substring(0, 4) + '-' +
-              person.occurDate.substring(4, 6) + '-' +
-              person.occurDate.substring(6, 8)
-            );
-            const hoursElapsed = (new Date().getTime() - occurDate.getTime()) / (1000 * 60 * 60);
-            return hoursElapsed <= 24;
-          });
+          const recentPersons = filterPersonsForMap(allPersons);
           
           if (recentPersons.length === 0) {
             set({ mapPersons: [] });
