@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { calculateElapsedTimeFromCreated, getDynamicWalkingDistance } from '../../utils/timeUtils';
+import { calculateElapsedTime, getDynamicWalkingDistance } from '../../utils/timeUtils';
 import type { MissingPersonListItem } from '../../types/missingPerson';
-import ElapsedTimeBadge from '../Common/ElapsedTimeBadge';
 
 interface MissingPersonCardProps {
   person: MissingPersonListItem;
@@ -11,7 +10,7 @@ interface MissingPersonCardProps {
 const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   const navigate = useNavigate();
   
-  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTimeFromCreated(person.createdAt));
+  const [elapsedTime, setElapsedTime] = useState(calculateElapsedTime(person.occurDate));
   const [walkingDistance, setWalkingDistance] = useState(
     getDynamicWalkingDistance(person.occurDate)
   );
@@ -19,12 +18,12 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
   // 실시간 업데이트
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(calculateElapsedTimeFromCreated(person.createdAt));
+      setElapsedTime(calculateElapsedTime(person.occurDate));
       setWalkingDistance(getDynamicWalkingDistance(person.occurDate));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [person.createdAt, person.occurDate]);
+  }, [person.occurDate]);
 
   // 컴포넌트 마운트 시 상세 정보 가져오기
 
@@ -46,99 +45,131 @@ const MissingPersonCard: React.FC<MissingPersonCardProps> = ({ person }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-      <div className="flex">
+      <div className="flex flex-col sm:flex-row">
         {/* 왼쪽 프로필 사진 영역 */}
-        <div className="relative flex-shrink-0 w-20 h-20 m-3">
-          <img
-            src={person.photoUrl}
-            alt={person.name}
-            className="w-full h-full object-cover rounded-lg"
-          />
-          <div className="absolute -top-1 -right-1">
-            <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium border ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
+        <div className="flex-shrink-0 w-full sm:w-56 bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6 sm:p-8">
+          <div className="relative w-32 h-32 sm:w-48 sm:h-48">
+            <img
+              src={person.photoUrl}
+              alt={person.name}
+              className="w-full h-full object-cover rounded-xl shadow-lg"
+            />
+            <div className="absolute -top-2 -right-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold border shadow-sm ${statusInfo.color}`}>
+                {statusInfo.label}
+              </span>
+            </div>
           </div>
-          {/* 경과시간 - 프로필 이미지 밑에 */}
-          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-            <ElapsedTimeBadge elapsedTime={elapsedTime} variant="compact" />
+          {/* 경과시간 - 사진 밑에 별도 영역 */}
+          <div className="mt-4 w-full text-center">
+            <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold text-gray-800 shadow-sm border border-white/50">
+              {elapsedTime.hours < 24 
+                ? elapsedTime.formatted 
+                : elapsedTime.hours < 168 
+                  ? `${Math.floor(elapsedTime.hours / 24)}일 전`
+                  : elapsedTime.hours < 720
+                    ? `${Math.floor(elapsedTime.hours / 168)}주 전`
+                    : elapsedTime.hours < 8760
+                      ? `${Math.floor(elapsedTime.hours / 720)}개월 전`
+                      : `${Math.floor(elapsedTime.hours / 8760)}년 전`
+              }
+            </div>
           </div>
         </div>
         
         {/* 오른쪽 정보 영역 */}
-        <div className="flex-1 p-4 pr-6 flex flex-col justify-between">
-          {/* 상단 정보 */}
-          <div>
-            <div className="mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">
+        <div className="flex-1 p-6 sm:p-8 flex flex-col">
+          <div className="flex-1">
+            {/* 이름과 기본 정보 */}
+            <div className="mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight mb-3">
                 {person.name}
-                <span className="text-sm text-gray-500 font-normal ml-2">
-                  ({person.age || person.ageNow || 'N/A'}세, {person.sexCode === '1' ? '남성' : person.sexCode === '2' ? '여성' : 'N/A'})
-                </span>
               </h3>
+              <div className="flex items-center gap-2">
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                  {person.age || person.ageNow || 'N/A'}세
+                </span>
+                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">
+                  {person.sexCode === '1' ? '남성' : person.sexCode === '2' ? '여성' : 'N/A'}
+                </span>
+              </div>
             </div>
             
-            {/* 기본 정보 - 2열로 정리 */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
-              <div>
-                <span className="text-gray-500">상태:</span>
-                <span className="ml-1 text-gray-900">{person.status === 'OPEN' ? '진행중' : '해제'}</span>
+            {/* 기본 정보 - 모바일에서는 세로로, 데스크톱에서는 2열로 */}
+            <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-3 sm:space-y-0 text-sm mb-6">
+              <div className="flex items-center bg-gray-50 rounded-lg p-3">
+                <span className="text-gray-600 font-medium min-w-[3rem]">상태</span>
+                <span className="ml-3 text-gray-900 font-semibold">
+                  {person.status === 'OPEN' ? '진행중' : '해제'}
+                </span>
               </div>
-              <div>
-                <span className="text-gray-500">대상코드:</span>
-                <span className="ml-1 text-gray-900">{person.targetCode || 'N/A'}</span>
+              <div className="flex items-center bg-gray-50 rounded-lg p-3">
+                <span className="text-gray-600 font-medium min-w-[3rem]">대상코드</span>
+                <span className="ml-3 text-gray-900 font-semibold">{person.targetCode || 'N/A'}</span>
               </div>
             </div>
             
             {/* 실종 정보 */}
-            <div className="border-t pt-2 mb-3">
-              <div className="text-sm mb-1">
-                <span className="text-gray-500">발생일:</span>
-                <span className="ml-1 text-gray-900">
-                  {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
-                </span>
-              </div>
-              <div className="text-sm mb-1">
-                <span className="text-gray-500">발생장소:</span>
-                <span className="ml-1 text-gray-900">{person.occurAddress || 'N/A'}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-500">예상범위:</span>
-                <span className="ml-1 text-blue-600 font-semibold">{radiusText}</span>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 mb-6">
+              <h4 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">실종 정보</h4>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <div>
+                    <span className="text-gray-600 font-medium text-sm block">발생일</span>
+                    <span className="text-gray-900 font-semibold">
+                      {person.occurDate.substring(0, 4)}-{person.occurDate.substring(4, 6)}-{person.occurDate.substring(6, 8)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <div>
+                    <span className="text-gray-600 font-medium text-sm block">발생장소</span>
+                    <span className="text-gray-900 font-semibold">{person.occurAddress || 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <div>
+                    <span className="text-gray-600 font-medium text-sm block">예상범위</span>
+                    <span className="text-blue-600 font-bold text-lg">{radiusText}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* 하단 버튼 - 오른쪽 정렬 */}
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => {
-                navigate(`/report/${person.id}`);
-              }}
-              className="bg-blue-500 text-white py-1.5 px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-            >
-              신고하기
-            </button>
-            <button
-              onClick={() => {
-                const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n발생장소: ${person.occurAddress || 'N/A'}`;
-                
-                if (navigator.share) {
-                  navigator.share({
-                    title: '실종자 정보',
-                    text: shareText,
-                    url: window.location.href
-                  });
-                } else {
-                  navigator.clipboard.writeText(shareText).then(() => {
-                    alert('실종자 정보가 클립보드에 복사되었습니다.');
-                  });
-                }
-              }}
-              className="px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              공유
-            </button>
+            
+            {/* 버튼들 - 모바일에서는 세로로, 데스크톱에서는 오른쪽 하단에 고정 */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-auto sm:justify-end">
+              <button
+                onClick={() => {
+                  navigate(`/report/${person.id}`);
+                }}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-semibold shadow-lg hover:shadow-xl flex-1 sm:flex-none sm:w-auto transform hover:scale-105"
+              >
+                📝 신고하기
+              </button>
+              <button
+                onClick={() => {
+                  const shareText = `${person.name} 실종자 정보\n상태: ${person.status === 'OPEN' ? '진행중' : '해제'}\n발생일: ${person.occurDate.substring(0, 4)}-${person.occurDate.substring(4, 6)}-${person.occurDate.substring(6, 8)}\n발생장소: ${person.occurAddress || 'N/A'}`;
+                  
+                  if (navigator.share) {
+                    navigator.share({
+                      title: '실종자 정보',
+                      text: shareText,
+                      url: window.location.href
+                    });
+                  } else {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                      alert('실종자 정보가 클립보드에 복사되었습니다.');
+                    });
+                  }
+                }}
+                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 text-sm font-semibold flex-1 sm:flex-none sm:w-auto transform hover:scale-105"
+              >
+                🔗 공유
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -217,6 +217,45 @@ export const getDynamicWalkingDistance = (occurDate: string): number => {
 };
 
 /**
+ * 경과시간을 상대적 시간으로 표시 (24시간 초과 시)
+ * @param elapsedTime 경과시간 정보
+ * @returns 상대적 시간 문자열
+ */
+export const formatRelativeTime = (elapsedTime: TimeElapsed): string => {
+  const { hours, totalSeconds } = elapsedTime;
+  
+  if (hours < 24) {
+    return elapsedTime.formatted; // 24시간 미만은 기존 형식
+  }
+  
+  const days = Math.floor(totalSeconds / 86400);
+  
+  if (days < 7) {
+    // 1주일 미만: "N일 전"
+    return `${days}일 전`;
+  } else if (days < 30) {
+    // 1개월 미만: "N주 전"
+    const weeks = Math.floor(days / 7);
+    return `${weeks}주 전`;
+  } else if (days < 365) {
+    // 1년 미만: "N개월 전"
+    const months = Math.floor(days / 30);
+    return `${months}개월 전`;
+  } else {
+    // 1년 이상: "N년 N개월 전"
+    const years = Math.floor(days / 365);
+    const remainingDays = days % 365;
+    const months = Math.floor(remainingDays / 30);
+    
+    if (months === 0) {
+      return `${years}년 전`;
+    } else {
+      return `${years}년 ${months}개월 전`;
+    }
+  }
+};
+
+/**
  * 나이에 따른 선택된 원형 영역 크기 계산
  * @param age 나이
  * @param mapLevel 현재 지도 줌 레벨

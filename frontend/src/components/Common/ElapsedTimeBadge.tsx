@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TimeElapsed } from '../../utils/timeUtils';
+import { formatRelativeTime } from '../../utils/timeUtils';
 
 interface ElapsedTimeBadgeProps {
   elapsedTime: TimeElapsed;
@@ -8,7 +9,7 @@ interface ElapsedTimeBadgeProps {
 }
 
 const ElapsedTimeBadge: React.FC<ElapsedTimeBadgeProps> = ({ 
-  elapsedTime, 
+  elapsedTime,
   variant = 'default',
   className = ''
 }) => {
@@ -58,6 +59,9 @@ const ElapsedTimeBadge: React.FC<ElapsedTimeBadgeProps> = ({
   const timeIcon = getTimeIcon();
   const variantStyles = getVariantStyles();
 
+  // 24시간 초과 시 상대적 시간으로 표시
+  const displayText = formatRelativeTime(elapsedTime);
+
   return (
     <div 
       className={`
@@ -73,7 +77,7 @@ const ElapsedTimeBadge: React.FC<ElapsedTimeBadgeProps> = ({
       `}
     >
       <span className="text-xs">{timeIcon}</span>
-      <span className="whitespace-nowrap">{elapsedTime.formatted}</span>
+      <span className="whitespace-nowrap">{displayText}</span>
     </div>
   );
 };

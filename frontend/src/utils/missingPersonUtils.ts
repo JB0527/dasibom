@@ -25,9 +25,30 @@ export const parseOccurDate = (occurDate: string): Date => {
 export const filterRecentMissingPersons = (persons: MissingPersonListItem[]) => {
   const now = new Date();
   return persons.filter(person => {
-    const missingDate = parseOccurDate(person.occurDate);
-    const hoursElapsed = (now.getTime() - missingDate.getTime()) / (1000 * 60 * 60);
+    const createdTime = new Date(person.createdAt);
+    const hoursElapsed = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
     return hoursElapsed <= 24; // 24시간 이내만 표시
+  });
+};
+
+/**
+ * 지도 표시용 필터: occurDate가 올해이고 createdAt이 24시간 이내인 경우만 유지
+ */
+export const filterPersonsForMap = (persons: MissingPersonListItem[]) => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  return persons.filter(person => {
+    // occurDate가 올해인지 확인
+    const occur = parseOccurDate(person.occurDate);
+    const isCurrentYear = occur.getFullYear() === currentYear;
+
+    // createdAt이 24시간 이내인지 확인
+    const createdTime = new Date(person.createdAt);
+    const hoursSinceCreated = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
+    const isWithin24hOfCreated = hoursSinceCreated <= 24;
+
+    return isCurrentYear && isWithin24hOfCreated;
   });
 };
 
