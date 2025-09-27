@@ -31,27 +31,52 @@ public class ReportService {
     public ReportResponse create(CreateReportRequest request) {
         MissingCase missingCase;
 
+        // Report 엔티티 생성
+        Report report = new Report();
+
         // 더미 데이터 케이스 확인 (1000-1003)
         if (request.caseId() >= 1000L && request.caseId() <= 1003L) {
-            // 더미 케이스용 MissingCase 객체 생성
-            missingCase = new MissingCase();
-            missingCase.setId(request.caseId());
+            // 더미 케이스는 native query로 직접 삽입
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime sightedAt = request.sightedAt() != null ? request.sightedAt() : now;
+
+            reportRepository.insertReportForDummyCase(
+                request.caseId(),
+                now,
+                sightedAt,
+                request.location(),
+                request.certainty().name(),
+                request.description(),
+                request.attachmentUrl(),
+                now,
+                now
+            );
+
+            // 더미 응답 생성 (ID는 알 수 없으므로 0으로 설정)
+            return new ReportResponse(
+                0L,
+                request.caseId(),
+                now,
+                sightedAt,
+                request.location(),
+                request.certainty(),
+                request.description(),
+                request.attachmentUrl()
+            );
         } else {
             // 실종사건 존재 확인
             missingCase = missingCaseRepository.findById(request.caseId())
                 .orElseThrow(() -> new IllegalArgumentException("실종사건을 찾을 수 없습니다: " + request.caseId()));
+            report.setMissingCase(missingCase);
         }
 
-        // Report 엔티티 생성
-        Report report = new Report();
-        report.setMissingCase(missingCase);
         report.setReportedAt(LocalDateTime.now());
         report.setSightedAt(request.sightedAt() != null ? request.sightedAt() : LocalDateTime.now());
         report.setLocation(request.location());
         report.setCertainty(request.certainty());
         report.setDescription(request.description());
         report.setAttachmentUrl(request.attachmentUrl());
-        
+
         // 저장
         Report savedReport = reportRepository.save(report);
         

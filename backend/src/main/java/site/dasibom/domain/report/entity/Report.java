@@ -22,8 +22,12 @@ public class Report extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "case_id", nullable = false)
+    @JoinColumn(name = "case_id")
     private MissingCase missingCase;
+
+    // 더미 케이스용 caseId 저장
+    @Column(name = "case_id", insertable = false, updatable = false)
+    private Long caseId;
 
     @Column(nullable = false)
     private LocalDateTime reportedAt = LocalDateTime.now();
