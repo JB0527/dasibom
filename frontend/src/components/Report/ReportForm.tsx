@@ -156,17 +156,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  // 파일을 URL로 변환하는 함수 (실제로는 서버에 업로드 후 URL 받아야 함)
-  const uploadFile = async (file: File): Promise<string> => {
-    // 임시로 로컬 URL 생성 (실제로는 서버 업로드 API 호출)
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        resolve(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,31 +166,45 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       return;
     }
 
-    // 파일이 있으면 업로드
-    let attachmentUrl = '';
+    // 파일 검증
     if (photos.length > 0) {
-      try {
-        // 첫 번째 파일만 업로드 (실제로는 여러 파일 처리 가능)
-        attachmentUrl = await uploadFile(photos[0]);
-      } catch (error) {
-        console.error('파일 업로드 실패:', error);
-        alert('파일 업로드에 실패했습니다.');
+      // 파일 크기 검증 (10MB 제한)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (photos[0].size > maxSize) {
+        alert('파일 크기는 10MB를 초과할 수 없습니다.');
+        return;
+      }
+      
+      // 파일 타입 검증
+      if (!photos[0].type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.');
         return;
       }
     }
 
-    const reportData: MissingPersonReportData = {
-      caseId: missingPerson.id,
-      location: formData.location!,
-      certainty: formData.certainty!,
-      description: formData.description!,
-      reportedAt: formData.reportedAt!,
-      attachmentUrl: attachmentUrl || undefined,
-    };
+    try {
+      // FormData 생성하여 파일과 함께 전송
+      const submitFormData = new FormData();
+      
+      // 기본 신고 데이터 추가
+      submitFormData.append('caseId', missingPerson.id.toString());
+      submitFormData.append('location', formData.location!);
+      submitFormData.append('certainty', formData.certainty!);
+      submitFormData.append('description', formData.description!);
+      submitFormData.append('reportedAt', formData.reportedAt!);
+      
+      // 파일이 있으면 추가
+      if (photos.length > 0) {
+        submitFormData.append('attachment', photos[0]);
+      }
 
-    const result = await submitMissingPersonReport(reportData);
-    if (result) {
-      onSuccess();
+      // submitMissingPersonReport 함수 사용
+      const result = await submitMissingPersonReport(submitFormData);
+      if (result) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('실종접수 제출 실패:', error);
     }
   };
 
