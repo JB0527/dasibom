@@ -29,10 +29,19 @@ public class ReportService {
     
     @Transactional
     public ReportResponse create(CreateReportRequest request) {
-        // 실종사건 존재 확인
-        MissingCase missingCase = missingCaseRepository.findById(request.caseId())
-            .orElseThrow(() -> new IllegalArgumentException("실종사건을 찾을 수 없습니다: " + request.caseId()));
-        
+        MissingCase missingCase;
+
+        // 더미 데이터 케이스 확인 (1000-1003)
+        if (request.caseId() >= 1000L && request.caseId() <= 1003L) {
+            // 더미 케이스용 MissingCase 객체 생성
+            missingCase = new MissingCase();
+            missingCase.setId(request.caseId());
+        } else {
+            // 실종사건 존재 확인
+            missingCase = missingCaseRepository.findById(request.caseId())
+                .orElseThrow(() -> new IllegalArgumentException("실종사건을 찾을 수 없습니다: " + request.caseId()));
+        }
+
         // Report 엔티티 생성
         Report report = new Report();
         report.setMissingCase(missingCase);
