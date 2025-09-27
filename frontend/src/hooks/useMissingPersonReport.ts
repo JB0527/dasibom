@@ -7,7 +7,7 @@ export const useMissingPersonReport = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submitMissingPersonReport = async (reportData: MissingPersonReportData): Promise<MissingPersonReportResponse | null> => {
+  const submitMissingPersonReport = async (reportData: MissingPersonReportData | FormData): Promise<MissingPersonReportResponse | null> => {
     setIsSubmitting(true);
     setError(null);
     

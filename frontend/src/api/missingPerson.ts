@@ -111,8 +111,16 @@ export const missingPersonApi = {
   },
 
   // 실종접수 API
-  submitMissingPersonReport: async (reportData: MissingPersonReportData): Promise<MissingPersonReportResponse> => {
-    const response = await apiClient.post('/reports', reportData);
+  submitMissingPersonReport: async (reportData: MissingPersonReportData | FormData): Promise<MissingPersonReportResponse> => {
+    const config = reportData instanceof FormData 
+      ? {
+          headers: {
+            // Content-Type을 명시하지 않음 - 브라우저가 자동으로 boundary 포함하여 설정
+          },
+        }
+      : {};
+    
+    const response = await apiClient.post('/reports', reportData, config);
     return response.data;
   },
 };
