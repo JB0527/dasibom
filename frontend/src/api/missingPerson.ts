@@ -31,49 +31,14 @@ const convertApiResponse = (apiPerson: ApiMissingPerson): MissingPersonListItem 
   };
 };
 
-// API 요청 캐싱을 위한 변수
-let casesListCache: { data: MissingPersonListItem[]; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
-
-// 중복 요청 방지를 위한 Promise 저장
-let ongoingRequest: Promise<MissingPersonListItem[]> | null = null;
+// React Query가 자동으로 캐싱을 처리하므로 수동 캐싱 로직 제거됨
 
 export const missingPersonApi = {
-  // 실종사건 목록 조회 (통합 API - 지도용/목록용 모두 사용)
+  // 실종사건 목록 조회 (React Query가 캐싱을 자동으로 처리)
   getCasesList: async (): Promise<MissingPersonListItem[]> => {
-    // 캐시가 있고 5분 이내라면 캐시 사용
-    if (casesListCache && (Date.now() - casesListCache.timestamp) < CACHE_DURATION) {
-      return casesListCache.data;
-    }
-
-    // 이미 진행 중인 요청이 있으면 해당 Promise 반환
-    if (ongoingRequest) {
-      return ongoingRequest;
-    }
-    
-    // 새로운 요청 시작
-    ongoingRequest = (async () => {
-      try {
-        const response = await apiClient.get<{ success: boolean; data: ApiMissingPerson[] }>('/cases');
-        
-        
-        const content = response.data.data || [];
-        const result = content.map((apiPerson) => convertApiResponse(apiPerson));
-        
-        // 결과를 캐시에 저장
-        casesListCache = {
-          data: result,
-          timestamp: Date.now()
-        };
-        
-        return result;
-      } finally {
-        // 요청 완료 후 ongoingRequest 초기화
-        ongoingRequest = null;
-      }
-    })();
-    
-    return ongoingRequest;
+    const response = await apiClient.get<{ success: boolean; data: ApiMissingPerson[] }>('/cases');
+    const content = response.data.data || [];
+    return content.map((apiPerson) => convertApiResponse(apiPerson));
   },
 
   // 특정 실종자 상세 정보 조회 (새로운 API)

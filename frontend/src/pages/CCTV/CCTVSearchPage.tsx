@@ -119,7 +119,7 @@ const CCTVSearchPage: React.FC = memo(() => {
         <div className="text-red-500 text-xl mr-3">⚠️</div>
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-red-800">데이터 로드 실패</h3>
-          <p className="text-xs text-red-600 mt-1">{error}</p>
+          <p className="text-xs text-red-600 mt-1">{error?.message || String(error)}</p>
         </div>
       </div>
     </div>
